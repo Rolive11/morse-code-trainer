@@ -1,0 +1,808 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morse Code Trainer</title>
+<style>
+  :root {
+    --bg: #14171c; --panel: #1d2128; --panel2: #252a33; --text: #e6e9ee; --muted: #8b93a1;
+    --accent: #f2b33d; --good: #4cc38a; --bad: #e5604f; --warn: #e8a33c; --line: #323844;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+         background: var(--bg); color: var(--text); }
+  header { display: flex; align-items: center; gap: 24px; padding: 14px 24px;
+           background: var(--panel); border-bottom: 1px solid var(--line); }
+  header h1 { font-size: 18px; margin: 0; letter-spacing: .5px; }
+  header h1 span { color: var(--accent); }
+  nav { display: flex; gap: 6px; }
+  nav button { background: none; border: 1px solid transparent; color: var(--muted);
+               padding: 8px 14px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  nav button.active { color: var(--text); background: var(--panel2); border-color: var(--line); }
+  main { max-width: 980px; margin: 0 auto; padding: 24px; }
+  .tab { display: none; } .tab.active { display: block; }
+  .card { background: var(--panel); border: 1px solid var(--line); border-radius: 12px;
+          padding: 18px 20px; margin-bottom: 18px; }
+  .card h2 { font-size: 15px; margin: 0 0 12px; color: var(--muted); font-weight: 600;
+             text-transform: uppercase; letter-spacing: .8px; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+  button.btn { background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+               padding: 9px 16px; border-radius: 8px; cursor: pointer; font-size: 14px; }
+  button.btn:hover { border-color: var(--muted); }
+  button.primary { background: var(--accent); color: #1a1a1a; border-color: var(--accent); font-weight: 600; }
+  button.small { padding: 5px 10px; font-size: 13px; }
+  .muted { color: var(--muted); font-size: 13px; }
+  .chars { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip { min-width: 46px; padding: 8px 10px; border-radius: 8px; background: var(--panel2);
+          border: 1px solid var(--line); text-align: center; cursor: pointer; font-size: 18px;
+          font-family: ui-monospace, Menlo, monospace; }
+  .chip:hover { border-color: var(--accent); }
+  .chip.new { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .chip small { display: block; font-size: 11px; color: var(--muted); letter-spacing: 1px; }
+  .chip .pat { display: none; } .showpat .chip .pat { display: block; }
+  input[type=text] { width: 100%; background: var(--bg); color: var(--text); border: 1px solid var(--line);
+         border-radius: 8px; padding: 12px; font-size: 20px; letter-spacing: 2px;
+         font-family: ui-monospace, Menlo, monospace; text-transform: uppercase; }
+  .result { font-family: ui-monospace, Menlo, monospace; font-size: 20px; letter-spacing: 2px;
+            line-height: 1.8; word-break: break-word; }
+  .ok { color: var(--good); } .miss { color: var(--bad); text-decoration: underline; }
+  .big { font-size: 30px; font-weight: 700; }
+  .stat-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 6px; }
+  .stat { background: var(--panel2); border-radius: 6px; padding: 6px; text-align: center;
+          font-family: ui-monospace, Menlo, monospace; }
+  .stat b { font-size: 17px; display: block; } .stat span { font-size: 11px; }
+  /* Key pad */
+  #keypad { height: 210px; border-radius: 16px; border: 2px dashed var(--line); background: var(--panel2);
+            display: flex; align-items: center; justify-content: center; flex-direction: column;
+            user-select: none; -webkit-user-select: none; cursor: pointer; touch-action: none;
+            transition: background .05s; }
+  #keypad.down { background: #3a3220; border-color: var(--accent); border-style: solid; }
+  #keypad .lamp { width: 26px; height: 26px; border-radius: 50%; background: #3a3f49; margin-bottom: 12px; }
+  #keypad.down .lamp { background: var(--accent); box-shadow: 0 0 22px var(--accent); }
+  #symbols { font-family: ui-monospace, Menlo, monospace; font-size: 34px; min-height: 44px;
+             letter-spacing: 6px; color: var(--accent); }
+  #decoded { font-family: ui-monospace, Menlo, monospace; font-size: 24px; min-height: 70px;
+             background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 12px;
+             letter-spacing: 2px; word-break: break-word; }
+  .bars { display: flex; align-items: flex-end; gap: 0; min-height: 50px; flex-wrap: wrap; }
+  .bar { height: 22px; border-radius: 3px; position: relative; margin-bottom: 18px; }
+  .bar label { position: absolute; top: 24px; left: 0; font-size: 10px; color: var(--muted); white-space: nowrap; }
+  .bar.el.good { background: var(--good); } .bar.el.off { background: var(--warn); }
+  .bar.gap { background: transparent; border-bottom: 2px dotted var(--line); height: 2px; margin-bottom: 28px; }
+  .bar.gap.off { border-bottom-color: var(--warn); }
+  #target { font-family: ui-monospace, Menlo, monospace; font-size: 40px; letter-spacing: 6px; min-height: 52px; }
+  .settings { display: grid; grid-template-columns: 220px 1fr 70px; gap: 14px 16px; align-items: center; }
+  .settings input[type=range] { width: 100%; }
+  select { background: var(--panel2); color: var(--text); border: 1px solid var(--line);
+           border-radius: 8px; padding: 8px; font-size: 14px; }
+  .pill { display: inline-block; padding: 3px 10px; border-radius: 99px; background: var(--panel2);
+          border: 1px solid var(--line); font-size: 13px; }
+</style>
+</head>
+<body>
+<header>
+  <h1>Morse <span>Trainer</span></h1>
+  <nav>
+    <button data-tab="learn" class="active">Learn &amp; Copy</button>
+    <button data-tab="adv">Advanced Receive</button>
+    <button data-tab="key">Key &amp; Decode</button>
+    <button data-tab="settings">Settings</button>
+  </nav>
+</header>
+
+<main>
+  <!-- ============ LEARN & COPY ============ -->
+  <section id="tab-learn" class="tab active">
+    <div class="card">
+      <h2>Your letters (Koch method)</h2>
+      <div class="row" style="justify-content: space-between; margin-bottom: 12px;">
+        <div><span class="big" id="levelNum">2</span> <span class="muted">characters learned &middot; new one is highlighted &middot; click any to hear it</span></div>
+        <div class="row">
+          <button class="btn small" id="levelDown">&minus; Remove</button>
+          <button class="btn small" id="levelUp">+ Add next</button>
+          <label class="muted"><input type="checkbox" id="showPat"> show patterns</label>
+        </div>
+      </div>
+      <div class="chars" id="learnedChars"></div>
+      <p class="muted" style="margin-bottom:0">Tip: learn each character as a <em>sound</em>, not a pattern of dots and dashes. Leave “show patterns” off once you can.</p>
+    </div>
+
+    <div class="card">
+      <h2>Listen &amp; Copy</h2>
+      <div class="row" style="margin-bottom: 14px;">
+        <select id="content">
+          <option value="groups">Random 5-letter groups</option>
+          <option value="words">Words (using your letters)</option>
+        </select>
+        <button class="btn" id="hearNew">Hear new letter</button>
+        <button class="btn primary" id="startCopy">▶ Start</button>
+        <button class="btn" id="replay" disabled>Replay</button>
+        <button class="btn" id="stopCopy">■ Stop</button>
+        <span class="muted" id="speedLabel"></span>
+      </div>
+      <input type="text" id="copyInput" placeholder="Type what you hear, then press Enter…" autocomplete="off" spellcheck="false">
+      <div style="margin-top: 14px;" id="copyResult"></div>
+    </div>
+
+    <div class="card">
+      <h2>Character accuracy (listening)</h2>
+      <div class="stat-grid" id="statGrid"></div>
+      <p class="muted" style="margin-bottom:0">Your weaker characters are sent more often in practice.</p>
+    </div>
+  </section>
+
+  <!-- ============ ADVANCED RECEIVE ============ -->
+  <section id="tab-adv" class="tab">
+    <div class="card">
+      <h2>Advanced receiving &mdash; all characters, realistic traffic</h2>
+      <div class="settings" style="grid-template-columns: 180px 1fr 70px; margin-bottom: 16px;">
+        <label>Content</label>
+        <select id="advContent" style="grid-column: span 2; justify-self: start;">
+          <option value="qso">On-air QSO exchanges</option>
+          <option value="calls">Callsigns</option>
+          <option value="text">Plain-English sentences</option>
+          <option value="groups">Random groups (all letters, numbers &amp; punctuation)</option>
+          <option value="numbers">Number groups</option>
+        </select>
+        <label>Character speed (WPM)</label><input type="range" id="advWpm" min="10" max="50" step="1"><span id="advWpmVal"></span>
+        <label>Effective speed (WPM)</label><input type="range" id="advEff" min="5" max="50" step="1"><span id="advEffVal"></span>
+        <label>Length</label><input type="range" id="advCount" min="1" max="15" step="1"><span id="advCountVal"></span>
+        <label>Static (QRN)</label>
+        <select id="advNoise" style="grid-column: span 2; justify-self: start;">
+          <option value="0">None</option><option value="0.25">Light</option>
+          <option value="0.55">Moderate</option><option value="0.9">Heavy</option>
+        </select>
+      </div>
+      <div class="row" style="margin-bottom: 14px;">
+        <label class="muted"><input type="checkbox" id="advAuto"> Auto-adjust speed (≥95% → +1 WPM, &lt;80% → −1 WPM)</label>
+        <label class="muted"><input type="checkbox" id="advHead"> Head copy (no typing &mdash; just reveal)</label>
+      </div>
+      <div class="row" style="margin-bottom: 14px;">
+        <button class="btn primary" id="advStart">▶ Start</button>
+        <button class="btn" id="advReplay" disabled>Replay</button>
+        <button class="btn" id="advStop">■ Stop</button>
+        <button class="btn" id="advReveal" disabled>Reveal</button>
+      </div>
+      <input type="text" id="advInput" placeholder="Type what you hear, then press Enter…" autocomplete="off" spellcheck="false">
+      <div style="margin-top: 14px;" id="advResult"></div>
+    </div>
+  </section>
+
+  <!-- ============ KEY & DECODE ============ -->
+  <section id="tab-key" class="tab">
+    <div class="card">
+      <h2>Straight key</h2>
+      <div id="keypad"><div class="lamp"></div><div>Press &amp; hold here &mdash; or hold the <b>Spacebar</b></div>
+        <div class="muted" style="margin-top:6px">Use a firm physical click on the trackpad (tap-to-click adds delay)</div></div>
+      <div class="row" style="margin-top: 14px; justify-content: space-between;">
+        <div id="symbols"></div>
+        <div class="row">
+          <span class="pill">Your speed: <b id="yourWpm">--</b> WPM</span>
+          <button class="btn small" id="resetSpeed">Reset speed</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Sending practice</h2>
+      <div class="row" style="margin-bottom: 12px;">
+        <select id="practiceMode">
+          <option value="off">Free keying (no target)</option>
+          <option value="letters">Send single letters</option>
+          <option value="words">Send words</option>
+        </select>
+        <button class="btn" id="hearTarget">Hear it</button>
+        <button class="btn" id="skipTarget">Skip</button>
+        <span id="practiceScore" class="muted"></span>
+      </div>
+      <div class="row" style="align-items: baseline; gap: 20px;">
+        <div id="target"></div>
+        <div id="targetResult" class="result"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Decoded text</h2>
+      <div id="decoded"></div>
+      <div class="row" style="margin-top: 10px;"><button class="btn small" id="clearDecoded">Clear</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Timing of last character</h2>
+      <div class="bars" id="bars"></div>
+      <p class="muted" style="margin-bottom:0">Green = good timing. Orange = off. Dahs should be about 3× a dit; gaps inside a letter about 1 dit.</p>
+    </div>
+  </section>
+
+  <!-- ============ SETTINGS ============ -->
+  <section id="tab-settings" class="tab">
+    <div class="card">
+      <h2>Sound &amp; speed</h2>
+      <div class="settings" id="settingsGrid"></div>
+      <p class="muted">Character speed is how fast each letter is sent. Effective speed adds extra space <em>between</em> letters and words (Farnsworth timing). Keep character speed around 18–20 WPM and raise the effective speed as you improve.</p>
+      <div class="row"><button class="btn" id="testTone">Test: “PARIS”</button></div>
+    </div>
+    <div class="card">
+      <h2>Progress</h2>
+      <div id="history" class="muted"></div>
+      <div class="row" style="margin-top:12px"><button class="btn" id="resetAll">Reset all progress</button></div>
+    </div>
+  </section>
+</main>
+
+<script>
+// ================= Data =================
+const MORSE = {
+  A:'.-',B:'-...',C:'-.-.',D:'-..',E:'.',F:'..-.',G:'--.',H:'....',I:'..',J:'.---',K:'-.-',L:'.-..',M:'--',
+  N:'-.',O:'---',P:'.--.',Q:'--.-',R:'.-.',S:'...',T:'-',U:'..-',V:'...-',W:'.--',X:'-..-',Y:'-.--',Z:'--..',
+  '0':'-----','1':'.----','2':'..---','3':'...--','4':'....-','5':'.....','6':'-....','7':'--...','8':'---..','9':'----.',
+  '.':'.-.-.-',',':'--..--','?':'..--..','/':'-..-.','=':'-...-'
+};
+const DECODE = Object.fromEntries(Object.entries(MORSE).map(([k, v]) => [v, k]));
+const KOCH = 'KMURESNAPTLWI.JZ=FOY,VG5/Q92H38B?47C1D60X'.split('');
+const WORDS = ('THE AND FOR ARE BUT NOT YOU ALL ANY CAN HAD HER WAS ONE OUR OUT DAY GET HAS HIM HIS HOW MAN NEW NOW OLD ' +
+  'SEE TWO WAY WHO DID ITS LET PUT SAY SHE TOO USE THAT WITH HAVE THIS WILL YOUR FROM THEY KNOW WANT BEEN GOOD MUCH ' +
+  'SOME TIME VERY WHEN COME HERE JUST LIKE LONG MAKE MANY MORE ONLY OVER SUCH TAKE THAN THEM WELL WERE WORK RADIO ' +
+  'NAME TEST SIGNAL POWER ANTENNA WEATHER SUNNY RAIN COLD WARM HOME MORSE CODE KEY SEND COPY SPEED SOUND LEARN ' +
+  'CQ DE RST QTH UR TNX ES FB OM WX RIG ANT HR PSE AGN SK TU GM GA GE NR MSG RPT 73 5NN').split(' ');
+
+const DEFAULTS = { charWpm: 20, effWpm: 10, freq: 600, volume: 60, groups: 6, groupLen: 5 };
+const ADV_DEFAULTS = { content: 'qso', wpm: 25, eff: 25, count: 3, noise: '0', auto: true, head: false };
+const STORE = 'morseTrainer.v1';
+let S = load();
+
+function load() {
+  try {
+    const s = JSON.parse(localStorage.getItem(STORE));
+    if (s) return { settings: { ...DEFAULTS, ...s.settings }, level: s.level || 2, stats: s.stats || {},
+                    history: s.history || [], adv: { ...ADV_DEFAULTS, ...s.adv } };
+  } catch (e) {}
+  return { settings: { ...DEFAULTS }, level: 2, stats: {}, history: [], adv: { ...ADV_DEFAULTS } };
+}
+function save() { localStorage.setItem(STORE, JSON.stringify(S)); }
+
+const $ = id => document.getElementById(id);
+const learned = () => KOCH.slice(0, S.level);
+
+// ================= Audio =================
+let ctx, osc, gain;
+function audio() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    osc = ctx.createOscillator(); gain = ctx.createGain();
+    gain.gain.value = 0; osc.type = 'sine';
+    osc.connect(gain).connect(ctx.destination); osc.start();
+  }
+  if (ctx.state === 'suspended') ctx.resume();
+  osc.frequency.value = S.settings.freq;
+  return ctx;
+}
+const vol = () => (S.settings.volume / 100) * 0.5;
+function hold(t) {
+  const p = gain.gain;
+  if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(t);
+  else { p.cancelScheduledValues(t); p.setValueAtTime(p.value, t); }
+}
+function toneOn() { stopPlay(); audio(); const t = ctx.currentTime; hold(t); gain.gain.setTargetAtTime(vol(), t, 0.003); }
+function toneOff() { if (!ctx) return; const t = ctx.currentTime; hold(t); gain.gain.setTargetAtTime(0, t, 0.003); }
+
+function timing(c = S.settings.charWpm, eff = S.settings.effWpm) {
+  const s = Math.min(eff, c);
+  const dit = 1.2 / c;
+  let cg = 3 * dit, wg = 7 * dit;
+  if (s < c) { const ta = (60 * c - 37.2 * s) / (s * c); cg = 3 * ta / 19; wg = 7 * ta / 19; }
+  return { dit, cg, wg };
+}
+
+// Band noise (static) for advanced receiving
+let noiseSrc = null;
+function startNoise(level) {
+  if (!level) return;
+  const len = ctx.sampleRate * 2, buf = ctx.createBuffer(1, len, ctx.sampleRate), d = buf.getChannelData(0);
+  for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+  noiseSrc = ctx.createBufferSource(); noiseSrc.buffer = buf; noiseSrc.loop = true;
+  const bp = ctx.createBiquadFilter(); bp.type = 'bandpass'; bp.frequency.value = S.settings.freq; bp.Q.value = 0.8;
+  const g = ctx.createGain(); g.gain.value = vol() * level * 1.6;
+  noiseSrc.connect(bp).connect(g).connect(ctx.destination);
+  noiseSrc.start();
+}
+function stopNoise() { if (noiseSrc) { try { noiseSrc.stop(); } catch (e) {} noiseSrc = null; } }
+
+let playTimer = null;
+let lastPlay = null; // { words, ends (audio-clock times each word finishes), stoppedAt }
+function playText(text, onDone, opts = {}) {
+  audio(); stopPlay();
+  const { dit, cg, wg } = timing(opts.charWpm, opts.effWpm);
+  startNoise(opts.noise || 0);
+  const v = vol(), p = gain.gain, r = 0.005;
+  let t = ctx.currentTime + 0.15;
+  p.setValueAtTime(0, ctx.currentTime);
+  const words = text.toUpperCase().split(/\s+/).filter(Boolean), ends = [];
+  for (const ch of text.toUpperCase() + ' ') {
+    if (ch === ' ') { if (ends.length < words.length) ends.push(t - cg); t += wg - cg; continue; }
+    const code = MORSE[ch]; if (!code) continue;
+    for (let i = 0; i < code.length; i++) {
+      const len = code[i] === '.' ? dit : 3 * dit;
+      p.setValueAtTime(0, t); p.linearRampToValueAtTime(v, t + r);
+      p.setValueAtTime(v, t + len - r); p.linearRampToValueAtTime(0, t + len);
+      t += len + (i < code.length - 1 ? dit : 0);
+    }
+    t += cg;
+  }
+  lastPlay = { words, ends, stoppedAt: null, endsAt: t };
+  playTimer = setTimeout(() => { playTimer = null; stopNoise(); onDone && onDone(); }, (t - ctx.currentTime) * 1000 + 300);
+}
+function stopPlay() {
+  stopNoise();
+  if (lastPlay && lastPlay.stoppedAt === null && ctx) lastPlay.stoppedAt = ctx.currentTime;
+  if (playTimer) { clearTimeout(playTimer); playTimer = null; }
+  if (ctx) { hold(ctx.currentTime); gain.gain.setTargetAtTime(0, ctx.currentTime, 0.003); }
+}
+
+// ================= Tabs =================
+let activeTab = 'learn';
+document.querySelectorAll('nav button').forEach(b => b.onclick = () => {
+  activeTab = b.dataset.tab;
+  document.querySelectorAll('nav button').forEach(x => x.classList.toggle('active', x === b));
+  document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.id === 'tab-' + activeTab));
+  stopPlay(); b.blur();
+  if (activeTab === 'settings') renderHistory();
+});
+
+// ================= Learn & Copy =================
+function renderLearned() {
+  $('levelNum').textContent = S.level;
+  const box = $('learnedChars'); box.innerHTML = '';
+  learned().forEach((ch, i) => {
+    const d = document.createElement('div');
+    d.className = 'chip' + (i === S.level - 1 ? ' new' : '');
+    d.innerHTML = `${ch}<small class="pat">${MORSE[ch].replace(/\./g, '·').replace(/-/g, '–')}</small>`;
+    d.onclick = () => playText(ch);
+    box.appendChild(d);
+  });
+  $('levelDown').disabled = S.level <= 2;
+  $('levelUp').disabled = S.level >= KOCH.length;
+  $('levelUp').textContent = S.level < KOCH.length ? `+ Add next (${KOCH[S.level]})` : 'All learned!';
+  renderStats();
+}
+$('showPat').onchange = e => $('learnedChars').parentElement.classList.toggle('showpat', e.target.checked);
+$('levelUp').onclick = () => { if (S.level < KOCH.length) { S.level++; save(); renderLearned(); playText(KOCH[S.level - 1].repeat(3).split('').join(' ')); } };
+$('levelDown').onclick = () => { if (S.level > 2) { S.level--; save(); renderLearned(); } };
+$('hearNew').onclick = () => { const c = KOCH[S.level - 1]; playText(`${c} ${c} ${c}`); };
+
+function weightedPick(set) {
+  const newest = set[set.length - 1];
+  const w = set.map(ch => {
+    const st = S.stats[ch];
+    const err = st && st.seen ? st.miss / st.seen : 0.5;
+    return 1 + 4 * err + (ch === newest ? 1.5 : 0);
+  });
+  let r = Math.random() * w.reduce((a, b) => a + b, 0);
+  for (let i = 0; i < set.length; i++) { r -= w[i]; if (r <= 0) return set[i]; }
+  return set[set.length - 1];
+}
+
+let copyGroups = null;
+function makeContent() {
+  const set = learned(), n = S.settings.groups;
+  if ($('content').value === 'words') {
+    const ok = WORDS.filter(w => [...w].every(c => set.includes(c)));
+    if (ok.length >= 4) return Array.from({ length: n }, () => ok[Math.floor(Math.random() * ok.length)]);
+    $('copyResult').innerHTML = `<p class="muted">Not enough words with your ${set.length} letters yet — using random groups.</p>`;
+  }
+  return Array.from({ length: n }, () => Array.from({ length: S.settings.groupLen }, () => weightedPick(set)).join(''));
+}
+function updateSpeedLabel() {
+  $('speedLabel').textContent = `${S.settings.charWpm} WPM characters, ${Math.min(S.settings.effWpm, S.settings.charWpm)} WPM effective`;
+}
+$('startCopy').onclick = () => {
+  $('copyResult').innerHTML = '';
+  copyGroups = makeContent();
+  $('copyInput').value = ''; $('copyInput').focus();
+  $('replay').disabled = false;
+  playText(copyGroups.join(' '));
+};
+$('replay').onclick = () => { if (copyGroups) { playText(copyGroups.join(' ')); $('copyInput').focus(); } };
+$('stopCopy').onclick = stopPlay;
+$('copyInput').addEventListener('keydown', e => { if (e.key === 'Enter') checkCopy(); });
+
+function checkCopy() {
+  if (!copyGroups) return;
+  stopPlay();
+  const got = $('copyInput').value.toUpperCase().trim().split(/\s+/);
+  let correct = 0, total = 0, expHtml = '', gotHtml = '';
+  copyGroups.forEach((g, i) => {
+    const gg = got[i] || '';
+    for (let j = 0; j < g.length; j++) {
+      total++;
+      const ok = gg[j] === g[j];
+      if (ok) correct++;
+      const st = S.stats[g[j]] || (S.stats[g[j]] = { seen: 0, miss: 0 });
+      st.seen++; if (!ok) st.miss++;
+      expHtml += `<span class="${ok ? 'ok' : 'miss'}">${g[j]}</span>`;
+      gotHtml += `<span class="${ok ? 'ok' : 'miss'}">${gg[j] || '_'}</span>`;
+    }
+    if (gg.length > g.length) gotHtml += `<span class="miss">${gg.slice(g.length)}</span>`;
+    expHtml += ' '; gotHtml += ' ';
+  });
+  const acc = Math.round((100 * correct) / total);
+  S.history.push({ date: new Date().toISOString(), acc, level: S.level, wpm: S.settings.charWpm, eff: Math.min(S.settings.effWpm, S.settings.charWpm) });
+  save();
+  let msg = acc >= 90
+    ? (S.level < KOCH.length ? `Great — 90%+! Ready to add <b>${KOCH[S.level]}</b>. <button class="btn small primary" id="advance">Add ${KOCH[S.level]}</button>` : 'Excellent — all characters learned!')
+    : 'Aim for 90% before adding the next letter. Press Start for another round.';
+  $('copyResult').innerHTML = `
+    <div class="row" style="gap:18px; margin-bottom:8px"><span class="big ${acc >= 90 ? 'ok' : ''}">${acc}%</span><span>${msg}</span></div>
+    <div class="result"><span class="muted" style="letter-spacing:0;font-size:13px">Sent:&nbsp;&nbsp;</span>${expHtml}</div>
+    <div class="result"><span class="muted" style="letter-spacing:0;font-size:13px">Typed:&nbsp;</span>${gotHtml}</div>`;
+  const adv = $('advance'); if (adv) adv.onclick = () => $('levelUp').click();
+  copyGroups = null; $('replay').disabled = true;
+  renderStats();
+}
+
+function renderStats() {
+  const g = $('statGrid'); g.innerHTML = '';
+  learned().forEach(ch => {
+    const st = S.stats[ch];
+    const pct = st && st.seen ? Math.round(100 * (1 - st.miss / st.seen)) : null;
+    const col = pct === null ? 'var(--muted)' : pct >= 90 ? 'var(--good)' : pct >= 75 ? 'var(--warn)' : 'var(--bad)';
+    g.innerHTML += `<div class="stat"><b>${ch}</b><span style="color:${col}">${pct === null ? '—' : pct + '%'}</span> <span class="muted">${st ? st.seen : 0}×</span></div>`;
+  });
+}
+
+// ================= Key & Decode =================
+const K = { down: false, downAt: 0, upAt: 0, sym: '', ditAvg: 0, dahAvg: 0, timers: [], els: [], text: '' };
+function resetSpeed() { const d = 1200 / S.settings.charWpm; K.ditAvg = d; K.dahAvg = 3 * d; showWpm(); }
+const ditEst = () => (K.ditAvg + K.dahAvg / 3) / 2;
+function showWpm() { $('yourWpm').textContent = Math.round(1200 / ditEst()); }
+resetSpeed();
+
+function keyDown() {
+  if (K.down) return;
+  K.down = true;
+  const now = performance.now();
+  K.timers.forEach(clearTimeout); K.timers = [];
+  if (K.sym && K.upAt) K.els.push({ type: 'gap', dur: now - K.upAt });
+  K.downAt = now;
+  toneOn();
+  $('keypad').classList.add('down');
+}
+function scheduleGaps() {
+  const d = ditEst();
+  K.timers.push(setTimeout(endChar, 2.5 * d));
+  K.timers.push(setTimeout(endWord, 6 * d));
+}
+function keyUp() {
+  if (!K.down) return;
+  K.down = false;
+  toneOff();
+  $('keypad').classList.remove('down');
+  const now = performance.now(), dur = now - K.downAt;
+  K.upAt = now;
+  if (dur < 15) { if (K.sym) scheduleGaps(); return; } // ignore switch bounce
+  if (!K.sym) K.els = [];
+  const threshold = Math.sqrt(K.ditAvg * K.dahAvg);
+  const isDit = dur < threshold;
+  if (isDit) K.ditAvg = 0.75 * K.ditAvg + 0.25 * dur;
+  else K.dahAvg = 0.75 * K.dahAvg + 0.25 * dur;
+  // keep the two averages sensibly apart and within human range
+  K.ditAvg = Math.min(Math.max(K.ditAvg, 25), 500);
+  K.dahAvg = Math.min(Math.max(K.dahAvg, K.ditAvg * 2), K.ditAvg * 5);
+  K.sym += isDit ? '.' : '-';
+  K.els.push({ type: isDit ? 'dit' : 'dah', dur });
+  $('symbols').textContent = K.sym.replace(/\./g, '·').replace(/-/g, '–');
+  showWpm();
+  scheduleGaps();
+}
+function endChar() {
+  if (!K.sym) return;
+  const ch = DECODE[K.sym] || '*';
+  K.text += ch; K.sym = '';
+  $('symbols').textContent = '';
+  renderDecoded(); renderBars(K.els);
+  practiceChar(ch);
+}
+function endWord() {
+  if (K.text && !K.text.endsWith(' ')) { K.text += ' '; renderDecoded(); }
+  practiceWordGap();
+}
+function renderDecoded() { $('decoded').textContent = K.text; }
+$('clearDecoded').onclick = () => { K.text = ''; renderDecoded(); };
+$('resetSpeed').onclick = resetSpeed;
+
+function renderBars(els) {
+  const d = ditEst(), box = $('bars'); box.innerHTML = '';
+  els.forEach(e => {
+    const r = e.dur / d;
+    let good = e.type === 'dit' ? r >= 0.5 && r <= 1.7 : e.type === 'dah' ? r >= 2.2 && r <= 4.5 : r <= 1.9;
+    const b = document.createElement('div');
+    b.className = `bar ${e.type === 'gap' ? 'gap' : 'el'} ${good ? 'good' : 'off'}`;
+    b.style.width = Math.min(r * 16, 320) + 'px';
+    b.innerHTML = `<label>${Math.round(e.dur)}ms</label>`;
+    box.appendChild(b);
+  });
+}
+
+// Pointer (mouse / trackpad) keying
+const pad = $('keypad');
+pad.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  e.preventDefault();
+  pad.setPointerCapture(e.pointerId);
+  keyDown();
+});
+pad.addEventListener('pointerup', keyUp);
+pad.addEventListener('pointercancel', keyUp);
+pad.addEventListener('lostpointercapture', keyUp);
+pad.addEventListener('contextmenu', e => e.preventDefault());
+
+// Spacebar keying
+const typing = el => el && el.matches && el.matches('input[type=text], textarea, select');
+document.addEventListener('keydown', e => {
+  if (activeTab !== 'key' || e.code !== 'Space' || typing(e.target)) return;
+  e.preventDefault();
+  if (!e.repeat) keyDown();
+});
+document.addEventListener('keyup', e => {
+  if (activeTab !== 'key' || e.code !== 'Space' || typing(e.target)) return;
+  e.preventDefault();
+  keyUp();
+});
+window.addEventListener('blur', keyUp);
+
+// Sending practice
+const P = { target: '', attempt: '', right: 0, tries: 0, busy: false };
+function newTarget() {
+  const mode = $('practiceMode').value, set = learned();
+  P.attempt = ''; P.busy = false;
+  $('targetResult').innerHTML = '';
+  if (mode === 'off') { P.target = ''; $('target').textContent = ''; return; }
+  if (mode === 'letters') P.target = weightedPick(set);
+  else {
+    const ok = WORDS.filter(w => [...w].every(c => set.includes(c)));
+    P.target = ok.length >= 3 ? ok[Math.floor(Math.random() * ok.length)]
+      : Array.from({ length: 3 }, () => weightedPick(set)).join('');
+  }
+  $('target').textContent = P.target;
+}
+function judge() {
+  P.busy = true; P.tries++;
+  const ok = P.attempt === P.target;
+  if (ok) P.right++;
+  $('targetResult').innerHTML = ok ? `<span class="ok">✓ ${P.attempt}</span>` : `<span class="miss">✗ ${P.attempt}</span>`;
+  $('practiceScore').textContent = `${P.right} / ${P.tries} correct`;
+  setTimeout(newTarget, ok ? 700 : 1400);
+}
+function practiceChar(ch) {
+  if (!P.target || P.busy) return;
+  P.attempt += ch;
+  $('targetResult').textContent = P.attempt;
+  if (P.attempt.length >= P.target.length) judge();
+}
+function practiceWordGap() { if (P.target && !P.busy && P.attempt) judge(); }
+$('practiceMode').onchange = e => { P.right = P.tries = 0; $('practiceScore').textContent = ''; newTarget(); e.target.blur(); };
+$('skipTarget').onclick = e => { newTarget(); e.target.blur(); };
+$('hearTarget').onclick = e => { if (P.target) playText(P.target); e.target.blur(); };
+
+// ================= Advanced Receive =================
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const LETTERS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const US_PFX = ['K', 'W', 'N', 'AA', 'AB', 'AC', 'AD', 'AE', 'AF', 'AG', 'AI', 'AJ', 'AK', 'KA', 'KB', 'KC', 'KD', 'KE', 'KF', 'KG', 'KI', 'KJ', 'KK', 'WA', 'WB', 'WD'];
+const DX_PFX = ['G', 'M', 'F', 'DL', 'EA', 'I', 'ON', 'PA', 'VE', 'VA', 'VK', 'ZL', 'JA', 'OH', 'SM', 'LA', 'OK', 'SP', 'HA', 'YO', 'EI', 'GM', 'OE', 'HB', 'LU', 'PY', 'ZS', 'UA'];
+const NAMES = ['BOB', 'JIM', 'TOM', 'ED', 'AL', 'BILL', 'JOE', 'DAN', 'MIKE', 'RON', 'DAVE', 'STEVE', 'MARY', 'ANN', 'SUE', 'JACK', 'HANK', 'FRED', 'GARY', 'KEN', 'PAUL', 'RAY', 'JOHN', 'WALT'];
+const QTHS = ['DENVER', 'AUSTIN', 'BOSTON', 'OHIO', 'MAINE', 'TEXAS', 'IOWA', 'RENO', 'TAMPA', 'DALLAS', 'SEATTLE', 'ATLANTA', 'MIAMI', 'PHOENIX', 'OMAHA', 'TULSA', 'BOISE', 'NR CHICAGO', 'LONDON', 'PARIS', 'TOKYO'];
+const RIGS = ['IC7300', 'K3', 'FT991', 'TS590', 'KX2', 'FT817', 'IC705', 'HOMEBREW', 'K4', 'FTDX10'];
+const ANTS = ['DIPOLE', 'VERT', 'YAGI', 'EFHW', 'LOOP', 'G5RV', 'INV V', 'BEAM', 'LONG WIRE'];
+const WXS = ['SUNNY', 'CLOUDY', 'RAIN', 'SNOW', 'FOGGY', 'WINDY', 'CLEAR', 'HOT', 'COLD'];
+const SENTENCES = [
+  'THE QUICK BROWN FOX JUMPS OVER THE LAZY DOG.', 'PRACTICE A LITTLE EVERY DAY AND SPEED WILL COME.',
+  'THE BAND IS OPEN TO EUROPE THIS MORNING.', 'PLEASE SEND YOUR NAME AND LOCATION.',
+  'I WORKED THREE NEW COUNTRIES LAST NIGHT ON FORTY METERS.', 'THE MEETING STARTS AT 7 PM ON TUESDAY.',
+  'MY NEW ANTENNA IS UP ABOUT 40 FEET IN AN OAK TREE.', 'HOW MANY WORDS PER MINUTE CAN YOU COPY?',
+  'THE STORM KNOCKED OUT POWER FOR TWO DAYS.', 'SIGNALS ARE WEAK BUT READABLE THROUGH THE STATIC.',
+  'WE DROVE 300 MILES TO THE HAMFEST ON SATURDAY.', 'COFFEE IS READY, COME IN AND SIT DOWN.',
+  'LISTEN FOR WHOLE WORDS, NOT SINGLE LETTERS.', 'THE CONTEST RUNS FOR 48 HOURS THIS WEEKEND.',
+  'SUNSPOT NUMBERS ARE HIGH SO CONDITIONS ARE GOOD.', 'SEND THE MESSAGE TO THE NET CONTROL STATION.',
+  'THE TRAIN LEAVES AT 6 AND ARRIVES AT NOON.', 'WE NEED 12 VOLUNTEERS FOR FIELD DAY.',
+  'MY FIRST RIG WAS A HOMEBREW 2 TUBE TRANSMITTER.', 'GOOD OPERATORS LISTEN MORE THAN THEY SEND.',
+  'THE PRICE OF THE RADIO IS 450 DOLLARS.', 'IS THE FREQUENCY IN USE?', 'COPY BEHIND AND STAY RELAXED.',
+  'RAIN IS EXPECTED THIS AFTERNOON WITH WINDS AT 20 MPH.', 'THE OLD KEY STILL WORKS AFTER 50 YEARS.'
+];
+
+function callsign() {
+  const dx = Math.random() < 0.3;
+  const sfx = Array.from({ length: dx ? 2 + (Math.random() < 0.5) : 1 + Math.floor(Math.random() * 3) }, () => pick(LETTERS)).join('');
+  let c = pick(dx ? DX_PFX : US_PFX) + Math.floor(Math.random() * 10) + sfx;
+  if (Math.random() < 0.06) c += '/P';
+  if (Math.random() < 0.04) c += '/QRP';
+  return c;
+}
+function qsoSequence() {
+  const c1 = callsign(), c2 = callsign(), n1 = pick(NAMES), n2 = pick(NAMES);
+  const rst = pick(['599', '579', '589', '559', '449', '5NN', '57N']);
+  const greet = pick(['GM', 'GA', 'GE']);
+  return [
+    `CQ CQ CQ DE ${c1} ${c1} K`,
+    `${c1} DE ${c2} ${c2} K`,
+    `${c2} DE ${c1} ${greet} ES TNX FER CALL. UR RST ${rst} ${rst}. NAME ${n1} ${n1}. QTH ${pick(QTHS)}. HW? ${c2} DE ${c1} K`,
+    `${c1} DE ${c2} R FB ${n1} ES TNX FER RPT. UR RST ${pick(['599', '579', '559'])}. NAME ${n2}. RIG ${pick(RIGS)} PWR ${pick([5, 50, 100, 500])}W ANT ${pick(ANTS)}. WX ${pick(WXS)} ${40 + Math.floor(Math.random() * 50)}F. ${c1} DE ${c2} K`,
+    `${c2} DE ${c1} R TNX ${n2} FER NICE QSO. HPE CUAGN. 73 ${c2} DE ${c1} SK`,
+  ];
+}
+function advContent() {
+  const n = S.adv.count;
+  switch (S.adv.content) {
+    case 'qso': { let out = []; while (out.length < n) out = out.concat(qsoSequence()); return out.slice(0, n); }
+    case 'calls': return Array.from({ length: n * 2 }, callsign);
+    case 'text': { const s = [...SENTENCES].sort(() => Math.random() - 0.5); return Array.from({ length: n }, (_, i) => s[i % s.length]); }
+    case 'numbers': return Array.from({ length: n * 2 }, () => Array.from({ length: 5 }, () => Math.floor(Math.random() * 10)).join(''));
+    default: return Array.from({ length: n * 2 }, () => Array.from({ length: 5 }, () => pick(KOCH)).join(''));
+  }
+}
+const norm = s => s.toUpperCase().replace(/[^A-Z0-9.,?/= ]/g, '').replace(/\s+/g, ' ').trim();
+
+function levenshtein(a, b) {
+  let prev = Array.from({ length: b.length + 1 }, (_, i) => i);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++)
+      cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prev = cur;
+  }
+  return prev[b.length];
+}
+// Mark which words match using longest-common-subsequence alignment (tolerates skipped words)
+function wordDiff(exp, got) {
+  const m = exp.length, n = got.length, L = Array.from({ length: m + 1 }, () => new Array(n + 1).fill(0));
+  for (let i = m - 1; i >= 0; i--) for (let j = n - 1; j >= 0; j--)
+    L[i][j] = exp[i] === got[j] ? L[i + 1][j + 1] + 1 : Math.max(L[i + 1][j], L[i][j + 1]);
+  const eOk = new Array(m).fill(false), gOk = new Array(n).fill(false);
+  for (let i = 0, j = 0; i < m && j < n;) {
+    if (exp[i] === got[j]) { eOk[i] = gOk[j] = true; i++; j++; }
+    else if (L[i + 1][j] >= L[i][j + 1]) i++; else j++;
+  }
+  const fmt = (ws, ok) => ws.map((w, i) => `<span class="${ok[i] ? 'ok' : 'miss'}">${w}</span>`).join(' ');
+  return { exp: fmt(exp, eOk), got: fmt(got, gOk) || '<span class="muted">(nothing)</span>', words: eOk.filter(Boolean).length };
+}
+
+let advText = null;
+const advOpts = () => ({ charWpm: S.adv.wpm, effWpm: S.adv.eff, noise: +S.adv.noise });
+function initAdv() {
+  const bind = (id, key, fmt = v => v) => {
+    const el = $(id), isBox = el.type === 'checkbox';
+    if (isBox) el.checked = S.adv[key]; else el.value = S.adv[key];
+    const show = () => { const v = $(id + 'Val'); if (v) v.textContent = fmt(S.adv[key]); };
+    show();
+    el.oninput = el.onchange = () => {
+      S.adv[key] = isBox ? el.checked : (el.type === 'range' ? +el.value : el.value);
+      if (key === 'wpm' && S.adv.eff > S.adv.wpm) { S.adv.eff = S.adv.wpm; $('advEff').value = S.adv.eff; $('advEffVal').textContent = S.adv.eff; }
+      if (key === 'eff' && S.adv.eff > S.adv.wpm) { S.adv.eff = S.adv.wpm; el.value = S.adv.eff; }
+      if (key === 'head') $('advInput').style.display = S.adv.head ? 'none' : '';
+      show(); save();
+    };
+  };
+  bind('advContent', 'content'); bind('advWpm', 'wpm'); bind('advEff', 'eff'); bind('advNoise', 'noise');
+  bind('advCount', 'count'); bind('advAuto', 'auto'); bind('advHead', 'head');
+  $('advInput').style.display = S.adv.head ? 'none' : '';
+}
+let advRound = 0;
+function estimateSecs(text) {
+  const { dit, cg, wg } = timing(S.adv.wpm, S.adv.eff);
+  let t = 0;
+  for (const ch of text.toUpperCase()) {
+    if (ch === ' ') { t += wg - cg; continue; }
+    const c = MORSE[ch]; if (!c) continue;
+    for (const e of c) t += (e === '.' ? 1 : 3) * dit + dit;
+    t += cg - dit;
+  }
+  return t;
+}
+function hideReveal() {
+  $('advResult').innerHTML = '';
+  $('advReveal').textContent = 'Reveal';
+}
+function advStatus(msg) { $('advResult').innerHTML = `<p class="muted">${msg}</p>`; }
+$('advStart').onclick = () => {
+  advText = advContent().join(' ');
+  advRound++;
+  hideReveal();
+  const secs = Math.round(estimateSecs(advText));
+  const dur = secs >= 60 ? `${Math.floor(secs / 60)} min ${secs % 60} s` : `${secs} s`;
+  advStatus(`Round ${advRound} — new text playing (about ${dur})… ${S.adv.head ? 'Press Stop any time, then Reveal shows only what was sent.' : ''}`);
+  $('advInput').value = '';
+  $('advReplay').disabled = false;
+  $('advReveal').disabled = !S.adv.head;
+  if (!S.adv.head) $('advInput').focus();
+  playText(advText, null, advOpts());
+};
+$('advReplay').onclick = () => {
+  if (!advText) return;
+  hideReveal();
+  advStatus(`Round ${advRound} — replaying the same text…`);
+  playText(advText, null, advOpts());
+  if (!S.adv.head) $('advInput').focus();
+};
+$('advStop').onclick = stopPlay;
+$('advReveal').onclick = () => {
+  if (!advText) return;
+  if ($('advReveal').textContent === 'Hide') { hideReveal(); return; }
+  const now = lastPlay ? (lastPlay.stoppedAt ?? ctx.currentTime) : Infinity;
+  const all = norm(advText).split(' ');
+  const sent = lastPlay ? lastPlay.ends.filter(e => e <= now).length : all.length;
+  const rest = all.length - sent;
+  const note = rest ? `<span class="muted" style="letter-spacing:0;font-size:13px"> … ${rest} more word${rest > 1 ? 's' : ''} not sent yet</span>` : '';
+  $('advResult').innerHTML = `<p class="muted">Round ${advRound} — this is what was sent:</p>
+    <div class="result">${sent ? all.slice(0, sent).join(' ') : '<span class="muted">(no complete words sent yet)</span>'}${note}</div>`;
+  $('advReveal').textContent = 'Hide';
+};
+$('advInput').addEventListener('keydown', e => { if (e.key === 'Enter') checkAdv(); });
+
+function checkAdv() {
+  if (!advText) return;
+  stopPlay();
+  const exp = norm(advText), got = norm($('advInput').value);
+  const acc = Math.max(0, Math.round(100 * (1 - levenshtein(exp, got) / exp.length)));
+  const d = wordDiff(exp.split(' '), got ? got.split(' ') : []);
+  const total = exp.split(' ').length;
+  S.history.push({ date: new Date().toISOString(), acc, mode: 'adv', content: S.adv.content, wpm: S.adv.wpm, eff: S.adv.eff });
+  let note = '';
+  if (S.adv.auto) {
+    const before = `${S.adv.wpm}/${S.adv.eff}`;
+    if (acc >= 95) { if (S.adv.eff < S.adv.wpm) S.adv.eff++; else if (S.adv.wpm < 50) { S.adv.wpm++; S.adv.eff = S.adv.wpm; } }
+    else if (acc < 80) { if (S.adv.eff > 5) S.adv.eff--; }
+    const after = `${S.adv.wpm}/${S.adv.eff}`;
+    if (before !== after) note = `Speed adjusted ${before} → ${after} WPM.`;
+    initAdv();
+  }
+  save();
+  $('advResult').innerHTML = `
+    <div class="row" style="gap:18px; margin-bottom:8px"><span class="big ${acc >= 95 ? 'ok' : ''}">${acc}%</span>
+      <span>${d.words} of ${total} words exact. <span class="muted">${note}</span></span></div>
+    <div class="result"><span class="muted" style="letter-spacing:0;font-size:13px">Sent:&nbsp;&nbsp;</span>${d.exp}</div>
+    <div class="result"><span class="muted" style="letter-spacing:0;font-size:13px">Typed:&nbsp;</span>${d.got}</div>`;
+  advText = null; $('advReplay').disabled = true;
+}
+
+// ================= Settings =================
+const SETTINGS = [
+  ['charWpm', 'Character speed (WPM)', 5, 40, 1],
+  ['effWpm', 'Effective speed (WPM)', 2, 40, 1],
+  ['freq', 'Tone pitch (Hz)', 300, 1000, 10],
+  ['volume', 'Volume', 0, 100, 1],
+  ['groups', 'Groups per round', 3, 20, 1],
+  ['groupLen', 'Letters per group', 2, 8, 1],
+];
+function renderSettings() {
+  const g = $('settingsGrid'); g.innerHTML = '';
+  SETTINGS.forEach(([key, label, min, max, step]) => {
+    g.insertAdjacentHTML('beforeend', `<label>${label}</label>
+      <input type="range" id="set-${key}" min="${min}" max="${max}" step="${step}" value="${S.settings[key]}">
+      <span id="val-${key}">${S.settings[key]}</span>`);
+    $('set-' + key).oninput = e => {
+      S.settings[key] = +e.target.value;
+      $('val-' + key).textContent = e.target.value;
+      if (ctx) osc.frequency.value = S.settings.freq;
+      if (key === 'charWpm') resetSpeed();
+      updateSpeedLabel(); save();
+    };
+  });
+}
+$('testTone').onclick = () => playText('PARIS PARIS');
+$('resetAll').onclick = () => {
+  if (!confirm('Reset all letters learned, statistics, and settings?')) return;
+  localStorage.removeItem(STORE); S = load();
+  renderSettings(); renderLearned(); updateSpeedLabel(); resetSpeed(); renderHistory(); initAdv();
+};
+function renderHistory() {
+  const h = S.history.slice(-10).reverse();
+  $('history').innerHTML = h.length
+    ? '<b>Recent copy sessions</b><br>' + h.map(x => `${new Date(x.date).toLocaleString()} — ${x.acc}% ${x.mode === 'adv' ? 'advanced (' + x.content + ')' : 'with ' + x.level + ' chars'} @ ${x.wpm}/${x.eff} WPM`).join('<br>')
+    : 'No sessions yet.';
+}
+
+// ================= Init =================
+renderSettings(); renderLearned(); updateSpeedLabel(); initAdv();
+</script>
+</body>
+</html>

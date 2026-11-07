@@ -1,0 +1,1163 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morse Code Listening</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #fffdf6; color: #111; font-family: Georgia, "Times New Roman", serif;
+         display: flex; flex-direction: column; align-items: center; padding: 30px 20px; min-height: 100vh; }
+  h1 { font-size: 46px; margin: 0 0 24px; }
+  .choices { display: flex; gap: 14px; margin-bottom: 26px; flex-wrap: wrap; justify-content: center; }
+  .choice { font-size: 28px; padding: 14px 28px; border-radius: 14px; border: 3px solid #999;
+            background: #fff; color: #111; cursor: pointer; font-family: inherit; }
+  .choice.on { border-color: #1f4fa8; background: #1f4fa8; color: #fff; font-weight: bold; }
+
+  #answer { width: 100%; max-width: 1100px; min-height: 170px; border: 4px solid #333; border-radius: 18px;
+            background: #fff; display: flex; align-items: center; justify-content: center; text-align: center;
+            font-family: "Courier New", monospace; font-weight: bold; font-size: 64px; letter-spacing: 6px;
+            padding: 20px; margin-bottom: 28px; word-break: break-word; }
+  #answer.hint { font-family: Georgia, serif; font-weight: normal; font-size: 34px; letter-spacing: 0; color: #555; }
+  #answer.count { font-family: Georgia, serif; font-size: 90px; color: #1d7a3a; letter-spacing: 0; }
+  #answer.list { font-size: 40px; letter-spacing: 3px; line-height: 1.6; text-align: left;
+                 display: block; max-height: 55vh; overflow-y: auto; }
+  #answer.list .title { font-family: Georgia, serif; font-weight: normal; font-size: 28px;
+                        letter-spacing: 0; color: #555; display: block; margin-bottom: 10px; }
+  #answer.list .item { display: inline-block; margin-right: 34px; }
+  #answer.list .cut { color: #999; }
+
+  .buttons { display: flex; gap: 22px; flex-wrap: wrap; justify-content: center; margin-bottom: 24px; }
+  .big { font-family: inherit; font-size: 40px; font-weight: bold; padding: 24px 40px; border-radius: 20px;
+         border: none; cursor: pointer; min-width: 300px; color: #fff; }
+  .big:active { transform: scale(0.97); }
+  #play { background: #1d7a3a; } #show { background: #1f4fa8; } #next { background: #b5541b; }
+  #cont { background: #6a3d9a; } #stop { background: #c62828; }
+
+  .settings { display: grid; grid-template-columns: auto auto auto auto; gap: 16px 22px; align-items: center;
+              font-size: 32px; margin-top: 10px; }
+  .settings .label { text-align: right; color: #333; }
+  .settings .value { font-weight: bold; min-width: 230px; text-align: center; }
+  .settings button { font-family: inherit; font-size: 28px; padding: 12px 24px; border-radius: 14px;
+                     border: 3px solid #555; background: #fff; cursor: pointer; min-width: 140px; }
+  .modes { display: flex; gap: 0; margin-bottom: 24px; border: 3px solid #333; border-radius: 16px; overflow: hidden; }
+  .mode { font-family: inherit; font-size: 32px; padding: 16px 40px; border: none; background: #fff;
+          color: #111; cursor: pointer; }
+  .mode.on { background: #333; color: #fff; font-weight: bold; }
+  body:not(.mode-receive) .recv { display: none !important; }
+  body:not(.mode-send) .send { display: none !important; }
+  body:not(.mode-learn) .learn { display: none !important; }
+  body.mode-learn.drill-send #keypad { display: flex !important; }
+  body.mode-learn.drill-send #lastPress { display: block !important; }
+
+  /* ---- Learn ---- */
+  #learnPanel { width: 100%; display: flex; flex-direction: column; align-items: center; }
+  .lesson-nav { display: flex; align-items: center; gap: 22px; font-size: 34px; margin-bottom: 18px; }
+  .lesson-nav button { font-family: inherit; font-size: 28px; padding: 10px 24px; border-radius: 12px;
+                       border: 3px solid #555; background: #fff; cursor: pointer; }
+  .lesson-nav button:disabled { opacity: .35; cursor: default; }
+  #cards { display: flex; gap: 18px; flex-wrap: wrap; justify-content: center; margin-bottom: 24px; }
+  .lcard { background: #fff; border: 3px solid #333; border-radius: 16px; padding: 12px 28px; text-align: center;
+           cursor: pointer; min-width: 150px; }
+  .lcard:hover { border-color: #1d7a3a; }
+  .lcard .ch { font-size: 72px; font-weight: bold; font-family: "Courier New", monospace; }
+  .lcard .pt { font-size: 44px; letter-spacing: 4px; color: #b5541b; font-weight: bold; }
+  .lcard small { font-size: 20px; color: #666; }
+  .pickgrid { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; max-width: 1100px; margin-bottom: 20px; }
+  .pick { font-family: "Courier New", monospace; font-size: 44px; font-weight: bold; min-width: 110px; padding: 10px 14px;
+          border-radius: 14px; border: 3px solid #333; background: #fff; cursor: pointer; }
+  .pick small { display: block; font-size: 22px; color: #b5541b; letter-spacing: 2px; }
+  .pick.good { background: #d8f2df; border-color: #1d7a3a; }
+  .pick.bad { background: #ffd6d0; border-color: #c62828; }
+  #drillScore { font-size: 30px; margin-bottom: 20px; text-align: center; }
+  #answer .pat { color: #b5541b; margin-left: 30px; }
+  #answer .ok { color: #1d7a3a; } #answer .no { color: #c62828; }
+  #answer small { display: block; font-family: Georgia, serif; font-weight: normal; font-size: 28px; letter-spacing: 0; color: #555; }
+  #answer.stack { flex-direction: column; }
+  #answer.msg { display: block; text-align: left; font-size: 50px; letter-spacing: 4px; line-height: 1.9; }
+  #answer.msg .w { display: inline-block; margin-right: 38px; white-space: nowrap; }
+  #answer.msg .l { padding: 0 3px; border-radius: 6px; }
+  #answer.msg .l.ok { color: #1d7a3a; }
+  #answer.msg .l.bad { color: #c62828; text-decoration: underline; }
+  #answer.msg .l.cur { background: #ffe9a8; outline: 3px solid #b5541b; }
+  #answer.msg .info { display: block; font-family: Georgia, serif; font-weight: normal; font-size: 28px;
+                      letter-spacing: 0; color: #444; line-height: 1.5; margin-top: 6px; }
+  #answer.report { display: block; text-align: left; font-family: Georgia, serif; font-weight: normal;
+                   font-size: 27px; letter-spacing: 0; line-height: 1.5; max-height: 60vh; overflow-y: auto; }
+  #answer.report h3 { margin: 4px 0 10px; font-size: 34px; }
+  #answer.report .row { padding: 6px 0; border-bottom: 1px solid #ddd; }
+  #answer.report .mono { font-family: "Courier New", monospace; font-weight: bold; }
+  #answer.report .pt { color: #b5541b; font-weight: bold; }
+  .chartgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(170px, 1fr)); gap: 10px;
+               width: 100%; max-width: 1100px; margin-bottom: 30px; }
+  .chartgrid div { background: #fff; border: 2px solid #999; border-radius: 10px; padding: 8px 14px; cursor: pointer;
+                   display: flex; justify-content: space-between; align-items: center; }
+  .chartgrid div:hover { border-color: #1d7a3a; }
+  .chartgrid b { font-family: "Courier New", monospace; font-size: 38px; }
+  .chartgrid span { color: #b5541b; font-weight: bold; font-size: 30px; letter-spacing: 2px; }
+  #answer.typed { font-size: 52px; letter-spacing: 4px; line-height: 1.5; text-align: left; display: block;
+                  max-height: 40vh; overflow-y: auto; }
+  #answer.typed .sym { color: #b5541b; }
+  #keypad { width: 100%; max-width: 1100px; height: 230px; border-radius: 22px; border: 5px dashed #777;
+            background: #f1ede0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 36px; color: #333; cursor: pointer; user-select: none; -webkit-user-select: none;
+            touch-action: none; margin-bottom: 26px; }
+  #keypad.down { border-style: solid; }
+  #keypad.dot  { background: #d8f2df; border-color: #1d7a3a; }
+  #keypad.dash { background: #ffe0c4; border-color: #b5541b; }
+  #padText { font-size: 36px; }
+  #keypad.dot #padText, #keypad.dash #padText, #padText.result { font-size: 76px; font-weight: bold; letter-spacing: 6px; }
+  #keypad.dot #padText, #padText.r-dot { color: #1d7a3a; }
+  #keypad.dash #padText, #padText.r-dash { color: #b5541b; }
+  #holdBar { position: relative; width: 70%; height: 30px; background: #fff; border: 2px solid #777;
+             border-radius: 8px; margin-top: 14px; overflow: hidden; }
+  #holdFill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #1d7a3a; }
+  #holdFill.dash { background: #b5541b; }
+  #holdMark { position: absolute; left: 50%; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: #111; }
+  #holdBar .zone { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center;
+                   font-size: 18px; color: #555; font-weight: bold; letter-spacing: 2px; }
+  #keypad small { font-size: 24px; color: #666; margin-top: 8px; }
+  #lastPress { font-size: 30px; margin: -12px 0 22px; color: #333; }
+  #lastPress b.dot { color: #1d7a3a; } #lastPress b.dash { color: #b5541b; }
+  #toggleShow { background: #1f4fa8; } #clearSend { background: #777; }
+</style>
+</head>
+<body>
+  <h1>Morse Code Practice</h1>
+
+  <div class="modes">
+    <button class="mode" data-mode="receive">🎧 Listen (Receive)</button>
+    <button class="mode" data-mode="send">🔑 Send (Transmit)</button>
+    <button class="mode" data-mode="learn">📖 Learn</button>
+  </div>
+
+  <div class="choices recv">
+    <button class="choice" data-kind="words">Words</button>
+    <button class="choice" data-kind="calls">Call Signs</button>
+    <button class="choice" data-kind="sentences">Sentences</button>
+  </div>
+
+  <div id="answer" class="hint">Press the green button to begin</div>
+
+  <div id="keypad" class="send">
+    <div id="padText">Press and hold here to send</div>
+    <small id="padSmall">— or hold down the Spacebar —</small>
+    <div id="holdBar"><div id="holdFill"></div><div id="holdMark"></div>
+      <span class="zone" style="left:0;width:50%">DOT</span><span class="zone" style="left:50%;width:50%">DASH</span></div>
+  </div>
+  <div class="send" id="lastPress">Last press: —</div>
+
+  <div class="learn" id="learnPanel">
+    <div class="lesson-nav">
+      <button id="lessonPrev">◀ Back</button>
+      <span id="lessonTitle"></span>
+      <button id="lessonNext">Next ▶</button>
+    </div>
+    <div id="cards"></div>
+    <div class="buttons" id="drillStart">
+      <button class="big" id="drillListen" style="background:#1d7a3a">🎧 Hear &amp; Pick</button>
+      <button class="big" id="drillSend" style="background:#b5541b">🔑 See &amp; Send</button>
+    </div>
+    <div id="pickGrid" class="pickgrid"></div>
+    <div id="drillScore"></div>
+    <div class="buttons" id="drillCtl" style="display:none">
+      <button class="big" id="hearAgain" style="background:#1f4fa8">🔊 Hear It Again</button>
+      <button class="big" id="endDrill" style="background:#777">Stop Practice</button>
+    </div>
+    <div id="wordBox" style="width:100%;display:flex;flex-direction:column;align-items:center;
+         border-top:3px solid #ddd;padding-top:22px;margin-top:4px;margin-bottom:26px">
+      <div style="font-size:34px;font-weight:bold;margin-bottom:6px">📝 Practice Words</div>
+      <div id="wordInfo" style="font-size:24px;color:#555;margin-bottom:16px;text-align:center"></div>
+      <div class="buttons" style="margin-bottom:16px">
+        <button class="big" id="wPlay" style="background:#6a3d9a">▶ Play Words</button>
+        <button class="big" id="wAgain" style="background:#1f4fa8;display:none">🔊 Repeat</button>
+        <button class="big" id="wShow" style="background:#b5541b;display:none">Show Answer</button>
+      </div>
+      <div class="settings" style="margin-top:0">
+        <span class="label">How many words</span>
+        <button id="wFewer">Fewer</button><span class="value" id="wCountVal"></span><button id="wMore">More</button>
+      </div>
+    </div>
+    <div id="msgBox" style="width:100%;display:flex;flex-direction:column;align-items:center;
+         border-top:3px solid #ddd;padding-top:22px;margin-bottom:26px">
+      <div style="font-size:34px;font-weight:bold;margin-bottom:6px">✍️ Send a Message</div>
+      <div id="msgInfo" style="font-size:24px;color:#555;margin-bottom:16px;text-align:center;max-width:1000px"></div>
+      <div class="buttons" style="margin-bottom:16px">
+        <button class="big" id="mStart" style="background:#00796b">▶ Start Sending</button>
+      </div>
+      <div class="settings" style="margin-top:0">
+        <span class="label">Number of words</span>
+        <button id="mWFewer">Fewer</button><span class="value" id="mWords"></span><button id="mWMore">More</button>
+        <span class="label">Letters per word</span>
+        <button id="mLFewer">Fewer</button><span class="value" id="mLen"></span><button id="mLMore">More</button>
+        <span class="label">Total</span><span></span><span class="value" id="mTotal"></span><span></span>
+      </div>
+    </div>
+    <div class="buttons" id="msgCtl" style="display:none">
+      <button class="big" id="mUndo" style="background:#777">⟲ Undo Last Letter</button>
+      <button class="big" id="mFinish" style="background:#00796b">🏁 Finish &amp; Report</button>
+    </div>
+    <div class="settings">
+      <span class="label">Letter speed</span>
+      <button id="lSlower">Slower</button><span class="value" id="lWpmVal"></span><button id="lFaster">Faster</button>
+      <span class="label">Show dot-dash patterns</span>
+      <span></span><button id="patBtn" style="min-width:230px"></button><span></span>
+    </div>
+    <div class="buttons" style="margin-top:26px">
+      <button class="big" id="chartBtn" style="background:#555">📋 Show All Letters</button>
+    </div>
+    <div id="chart" class="chartgrid" style="display:none"></div>
+  </div>
+  <div class="buttons send">
+    <button class="big" id="toggleShow">Hide what I send</button>
+    <button class="big" id="clearSend">Start Over</button>
+  </div>
+  <div class="buttons send">
+    <button class="big" id="measure" style="background:#00796b">📏 Measure My Timing</button>
+  </div>
+  <div class="settings send">
+    <span class="label">Dash when held longer than</span>
+    <button id="shorter">Shorter</button><span class="value" id="dashVal"></span><button id="longer">Longer</button>
+    <span class="label">Learn my timing automatically</span>
+    <span></span><button id="autoBtn" style="min-width:230px"></button><span></span>
+  </div>
+
+  <div class="buttons recv" id="row1">
+    <button class="big" id="play">▶ Start</button>
+    <button class="big" id="show" style="display:none">Show Answer</button>
+    <button class="big" id="next" style="display:none">Next ➜</button>
+  </div>
+  <div class="buttons recv">
+    <button class="big" id="cont">Continuous ▶▶</button>
+    <button class="big" id="stop">■ Stop</button>
+  </div>
+
+  <div class="settings recv">
+    <span class="label">Speed</span>
+    <button id="slower">Slower</button><span class="value" id="wpmVal"></span><button id="faster">Faster</button>
+
+    <span class="label">How many</span>
+    <button id="fewer">Fewer</button><span class="value" id="countVal"></span><button id="more">More</button>
+
+    <span class="label">Wait before start</span>
+    <button id="lessWait">Less</button><span class="value" id="delayVal"></span><button id="moreWait">More</button>
+  </div>
+
+<script>
+const MORSE = {
+  A:'.-',B:'-...',C:'-.-.',D:'-..',E:'.',F:'..-.',G:'--.',H:'....',I:'..',J:'.---',K:'-.-',L:'.-..',M:'--',
+  N:'-.',O:'---',P:'.--.',Q:'--.-',R:'.-.',S:'...',T:'-',U:'..-',V:'...-',W:'.--',X:'-..-',Y:'-.--',Z:'--..',
+  '0':'-----','1':'.----','2':'..---','3':'...--','4':'....-','5':'.....','6':'-....','7':'--...','8':'---..','9':'----.',
+  '.':'.-.-.-',',':'--..--','?':'..--..','/':'-..-.'
+};
+const WORDS = ('THE AND FOR YOU ALL CAN HAD HER WAS ONE OUT DAY HOW MAN NEW NOW OLD SEE TWO WAY WHO SAY SHE ' +
+  'THAT WITH HAVE THIS WILL YOUR FROM KNOW GOOD SOME TIME VERY WHEN COME HERE LIKE LONG MAKE MORE OVER ' +
+  'RADIO NAME SIGNAL POWER WEATHER SUNNY RAIN HOME CODE KEY SEND SOUND FRIEND FAMILY MORNING EVENING ' +
+  'COFFEE DINNER GARDEN WATER HOUSE NAVY ARMY SHIP PLANE TRAIN HAPPY THANKS CQ DE RST QTH TNX 73').split(' ');
+const SENTENCES = [
+  'GOOD MORNING', 'HOW ARE YOU', 'THANKS FOR THE CALL', 'MY NAME IS BOB', 'THE WEATHER IS SUNNY',
+  'NICE TO MEET YOU', 'CQ CQ DE W1AW', 'UR RST 599', 'QTH IS OHIO', 'HAVE A GOOD DAY',
+  'SEE YOU AGAIN SOON', 'THE COFFEE IS HOT', 'IT IS RAINING HERE', 'MY RIG IS OLD BUT GOOD',
+  'THE BAND IS OPEN', 'BEST 73 TO YOU', 'I AM AT HOME', 'TIME FOR DINNER', 'THE SUN IS OUT', 'HAPPY BIRTHDAY'
+];
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const LET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+function callsign() {
+  const pre = pick(['K', 'W', 'N', 'W', 'K', 'AA', 'KA', 'WA', 'KB', 'WB', 'VE', 'G']);
+  let suf = ''; for (let i = 0, n = 1 + Math.floor(Math.random() * 3); i < n; i++) suf += pick(LET);
+  return pre + Math.floor(Math.random() * 10) + suf;
+}
+function newItem() {
+  if (cfg.kind === 'calls') return callsign();
+  if (cfg.kind === 'sentences') return pick(SENTENCES);
+  return pick(WORDS);
+}
+function newList() {
+  const list = [];
+  while (list.length < cfg.count) {
+    const n = newItem();
+    if (n !== list[list.length - 1]) list.push(n);
+  }
+  return list;
+}
+
+// ---- remembered settings ----
+const KEY = 'morseSimple.v1';
+let cfg = { wpm: 15, kind: 'words', count: 1, delay: 3 };
+try { cfg = { ...cfg, ...JSON.parse(localStorage.getItem(KEY)) }; } catch (e) {}
+const save = () => localStorage.setItem(KEY, JSON.stringify(cfg));
+
+// ---- sound ----
+let ctx, gain;
+function audio() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = ctx.createOscillator(); osc.frequency.value = 600;
+    gain = ctx.createGain(); gain.gain.value = 0;
+    osc.connect(gain).connect(ctx.destination); osc.start();
+  }
+  if (ctx.state === 'suspended') ctx.resume();
+}
+function silence() {
+  if (ctx) { const now = ctx.currentTime; gain.gain.cancelScheduledValues(now); gain.gain.setValueAtTime(0, now); }
+}
+// Schedule one item; returns the audio-clock time it finishes.
+function schedule(text, wpm = cfg.wpm, startAt = null) {
+  const p = gain.gain, now = ctx.currentTime, v = 0.35, r = 0.006, dit = 1.2 / wpm;
+  let t;
+  if (startAt === null) { p.cancelScheduledValues(now); p.setValueAtTime(0, now); t = now + 0.1; }
+  else t = startAt;
+  for (const ch of text) {
+    if (ch === ' ') { t += 4 * dit; continue; }
+    const code = MORSE[ch]; if (!code) continue;
+    for (const e of code) {
+      const len = e === '.' ? dit : 3 * dit;
+      p.setValueAtTime(0, t); p.linearRampToValueAtTime(v, t + r);
+      p.setValueAtTime(v, t + len - r); p.linearRampToValueAtTime(0, t + len);
+      t += len + dit;
+    }
+    t += 2 * dit;
+  }
+  return t;
+}
+
+// ---- one "session": countdown, then send a list one by one ----
+const $ = id => document.getElementById(id);
+const S = { list: [], sent: [], i: 0, mode: 'single', busy: false, itemEnd: 0, timer: null, revealed: false };
+
+function showHint(text) { const a = $('answer'); a.className = 'hint'; a.textContent = text; }
+function showList(title) {
+  const a = $('answer');
+  if (S.sent.length === 1 && !S.cut) { a.className = ''; a.textContent = PREAMBLE + '  ' + S.sent[0]; return; }
+  a.className = 'list';
+  const items = S.sent.map((w, i) => {
+    const partial = S.cut && i === S.sent.length - 1;
+    return `<span class="item${partial ? ' cut' : ''}">${w}${partial ? ' (stopped)' : ''}</span>`;
+  }).join('');
+  a.innerHTML = `<span class="title">${title} (${S.sent.length} after CQ):</span><span class="item">${PREAMBLE}</span>${items}`;
+  a.scrollTop = 0;
+}
+function setButtons() {
+  const running = S.busy;
+  $('row1').style.visibility = running ? 'hidden' : 'visible';
+  $('cont').style.display = running ? 'none' : '';
+  const have = S.list.length > 0 && S.mode === 'single';
+  $('play').textContent = have ? '▶ Play Again' : '▶ Start';
+  $('show').style.display = have ? '' : 'none';
+  $('next').style.display = have ? '' : 'none';
+}
+
+function begin(list, mode) {
+  audio(); stop(false);
+  Object.assign(S, { list, sent: [], i: 0, mode, busy: true, cut: false, revealed: false, cqDone: false });
+  setButtons();
+  let left = cfg.delay;
+  const tick = () => {
+    if (!S.busy) return;
+    if (left <= 0) { sendNext(); return; }
+    const a = $('answer'); a.className = 'count'; a.textContent = `Get ready…  ${left}`;
+    left--;
+    S.timer = setTimeout(tick, 1000);
+  };
+  tick();
+}
+const PREAMBLE = 'CQ';   // every transmission opens with this
+function itemPause() {
+  const dit = 1.2 / cfg.wpm;
+  return cfg.kind === 'words' ? 7 * dit : Math.max(1.2, 10 * dit);
+}
+function sendNext() {
+  if (!S.busy) return;
+  if (!S.cqDone) {
+    S.cqDone = true;
+    showHint('Listening…   CQ');
+    S.itemEnd = schedule(PREAMBLE);
+    S.timer = setTimeout(sendNext, ((S.itemEnd - ctx.currentTime) + itemPause()) * 1000);
+    return;
+  }
+  if (S.mode === 'continuous' && S.i >= S.list.length) {   // continuous never runs out
+    let n; do { n = newItem(); } while (n === S.list[S.list.length - 1]);
+    S.list.push(n);
+  }
+  if (S.i >= S.list.length) { finish(); return; }
+  const item = S.list[S.i++];
+  S.sent.push(item);
+  showHint(S.mode === 'continuous' ? `Sending continuously…  (${S.sent.length} sent)   Press STOP to see them all.`
+         : S.list.length > 1 ? `Listening…   ${S.sent.length} of ${S.list.length}` : 'Listening…');
+  S.itemEnd = schedule(item);
+  const pause = itemPause();
+  const more = S.mode === 'continuous' || S.i < S.list.length;
+  S.timer = setTimeout(sendNext, ((S.itemEnd - ctx.currentTime) + (more ? pause : 0)) * 1000);
+}
+function finish() {
+  S.busy = false; setButtons();
+  if (S.mode === 'continuous') showList('Everything that was sent');
+  else showHint('Press  Show Answer  to check');
+}
+// Stop: halt sound; if asked, show what was sent.
+function stop(report = true) {
+  const wasBusy = S.busy;
+  clearTimeout(S.timer); silence();
+  if (!wasBusy) return;
+  S.cut = ctx && ctx.currentTime < S.itemEnd && S.sent.length > 0;
+  S.busy = false;
+  if (S.mode === 'continuous') S.list = [];
+  setButtons();
+  if (!report) return;
+  if (S.sent.length === 0) { showHint('Stopped. Press the green button to begin'); return; }
+  if (S.mode === 'continuous') showList('Everything that was sent');
+  else showHint('Stopped.  Press  Show Answer  to check');
+}
+
+// ---- buttons ----
+$('play').onclick = () => begin(S.list.length && S.mode === 'single' ? S.list : newList(), 'single');
+$('next').onclick = () => begin(newList(), 'single');
+$('show').onclick = () => {
+  if (S.busy || !S.sent.length) return;
+  showList('This is what was sent');
+};
+$('cont').onclick = () => begin([], 'continuous');
+$('stop').onclick = () => stop(true);
+
+// ---- settings ----
+function showSettings() {
+  $('wpmVal').textContent = cfg.wpm + ' words/min';
+  $('countVal').textContent = cfg.count === 1 ? '1 at a time' : cfg.count + ' at a time';
+  $('delayVal').textContent = cfg.delay === 0 ? 'No wait' : cfg.delay + (cfg.delay === 1 ? ' second' : ' seconds');
+  save();
+}
+const step = n => (n < 10 ? 1 : 5);
+$('slower').onclick = () => { cfg.wpm = Math.max(5, cfg.wpm - 1); showSettings(); };
+$('faster').onclick = () => { cfg.wpm = Math.min(40, cfg.wpm + 1); showSettings(); };
+$('fewer').onclick = () => { cfg.count = Math.max(1, cfg.count - step(cfg.count - 1)); showSettings(); };
+$('more').onclick = () => { cfg.count = Math.min(100, cfg.count + step(cfg.count)); showSettings(); };
+$('lessWait').onclick = () => { cfg.delay = Math.max(0, cfg.delay - 1); showSettings(); };
+$('moreWait').onclick = () => { cfg.delay = Math.min(30, cfg.delay + 1); showSettings(); };
+
+document.querySelectorAll('.choice').forEach(b => {
+  b.classList.toggle('on', b.dataset.kind === cfg.kind);
+  b.onclick = () => {
+    cfg.kind = b.dataset.kind; save();
+    document.querySelectorAll('.choice').forEach(x => x.classList.toggle('on', x === b));
+    if (!S.busy) { S.list = []; S.sent = []; setButtons(); showHint('Press the green button to begin'); }
+  };
+});
+showSettings();
+
+// ================= SEND (TRANSMIT) =================
+const DECODE = Object.fromEntries(Object.entries(MORSE).map(([k, v]) => [v, k]));
+const K = { down: false, downAt: 0, sym: '', timers: [], text: '', show: true, recent: [] };
+// cfg.dashMs: a press longer than this is a dash. cfg.auto: learn it from his own presses.
+if (!cfg.dashMs) cfg.dashMs = 250;
+if (cfg.auto === undefined) cfg.auto = true;
+function resetKeyer() { K.recent = []; }
+
+// Find the natural split between short and long presses (2-group clustering on log durations).
+// Only adjusts when recent presses clearly contain both dots and dashes, so it can never get "stuck".
+function learnTiming() {
+  const r = K.recent;
+  if (r.length < 4) return;
+  const logs = r.map(Math.log), lo = Math.min(...logs), hi = Math.max(...logs);
+  if (hi - lo < Math.log(1.8)) return;              // all presses about the same length: nothing to learn
+  let a = lo, b = hi;
+  for (let it = 0; it < 12; it++) {
+    const mid = (a + b) / 2, A = logs.filter(x => x < mid), B = logs.filter(x => x >= mid);
+    if (!A.length || !B.length) return;
+    a = A.reduce((s, x) => s + x, 0) / A.length;
+    b = B.reduce((s, x) => s + x, 0) / B.length;
+  }
+  if (b - a < Math.log(1.8)) return;
+  const target = Math.exp((a + b) / 2);
+  cfg.dashMs = Math.round(Math.min(1000, Math.max(70, 0.6 * cfg.dashMs + 0.4 * target)));
+  showSendSettings();
+}
+function showSendSettings() {
+  $('dashVal').textContent = (cfg.dashMs / 1000).toFixed(2) + ' sec';
+  $('autoBtn').textContent = cfg.auto ? 'ON' : 'OFF';
+  $('autoBtn').style.background = cfg.auto ? '#1d7a3a' : '#fff';
+  $('autoBtn').style.color = cfg.auto ? '#fff' : '#111';
+  save();
+}
+$('shorter').onclick = e => { cfg.dashMs = Math.max(70, cfg.dashMs - 20); showSendSettings(); e.currentTarget.blur(); };
+$('longer').onclick = e => { cfg.dashMs = Math.min(1000, cfg.dashMs + 20); showSendSettings(); e.currentTarget.blur(); };
+$('autoBtn').onclick = e => { cfg.auto = !cfg.auto; showSendSettings(); e.currentTarget.blur(); };
+showSendSettings();
+
+function holdGain(t) {
+  const p = gain.gain;
+  if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(t); else { p.cancelScheduledValues(t); p.setValueAtTime(p.value, t); }
+}
+function toneOn() { audio(); const t = ctx.currentTime; holdGain(t); gain.gain.setTargetAtTime(0.35, t, 0.003); }
+function toneOff() { if (!ctx) return; const t = ctx.currentTime; holdGain(t); gain.gain.setTargetAtTime(0, t, 0.003); }
+
+function renderSend() {
+  if (cfg.mode === 'learn') { learnShowProgress(); return; }
+  const a = $('answer'); a.style.fontSize = ''; a.style.letterSpacing = '';
+  $('toggleShow').textContent = K.show ? 'Hide what I send' : 'Show what I sent';
+  if (K.show) {
+    a.className = 'typed';
+    const esc = K.text.replace(/&/g, '&amp;').replace(/</g, '&lt;');
+    const sym = K.sym.replace(/\./g, '·').replace(/-/g, '–');
+    a.innerHTML = (esc || (sym ? '' : '<span style="color:#888;font-size:34px;font-family:Georgia">Your letters will appear here</span>'))
+                + (sym ? `<span class="sym"> ${sym}</span>` : '');
+    a.scrollTop = a.scrollHeight;
+  } else {
+    const n = K.text.replace(/\s/g, '').length;
+    a.className = 'hint';
+    a.textContent = n ? `Sending… (hidden)   ${n} letter${n > 1 ? 's' : ''} so far` : 'Sending… (hidden)';
+  }
+}
+// ---- live DOT / DASH indicator: the bar's midpoint is the dot/dash boundary ----
+let holdRaf = null, idleTimer = null;
+function showHold(ms, final) {
+  const isDash = ms >= cfg.dashMs;
+  const pad = $('keypad'), fill = $('holdFill'), txt = $('padText');
+  fill.style.width = Math.min(100, (ms / (2 * cfg.dashMs)) * 100) + '%';
+  fill.classList.toggle('dash', isDash);
+  if (!final) {
+    pad.classList.toggle('dot', !isDash); pad.classList.toggle('dash', isDash);
+    txt.className = ''; txt.textContent = isDash ? 'DASH' : 'DOT';
+  } else {
+    pad.classList.remove('dot', 'dash');
+    txt.className = 'result ' + (isDash ? 'r-dash' : 'r-dot'); txt.textContent = isDash ? 'DASH' : 'DOT';
+  }
+}
+function holdLoop() {
+  if (!K.down) return;
+  showHold(performance.now() - K.downAt, false);
+  holdRaf = requestAnimationFrame(holdLoop);
+}
+function padIdle() {
+  const txt = $('padText'); txt.className = ''; txt.textContent = 'Press and hold here to send';
+  $('holdFill').style.width = '0';
+}
+
+function keyDown() {
+  if (K.down) return;
+  K.down = true;
+  K.timers.forEach(clearTimeout); K.timers = [];
+  if (typeof MS !== 'undefined' && MS.pending) clearTimeout(MS.pendTimer);   // the rest of a split letter is coming
+  K.downAt = performance.now();
+  if (M.on && M.lastUp && K.downAt - M.lastUp < 4000) M.gaps.push(Math.round(K.downAt - M.lastUp)); // ignore long breaks
+  toneOn();
+  $('keypad').classList.add('down');
+  clearTimeout(idleTimer); cancelAnimationFrame(holdRaf); holdLoop();
+}
+// Letter ends after a pause of ~1.6x the dot/dash boundary (about 3 dot-lengths); word after ~4x.
+function scheduleGaps() {
+  const f = cfg.letterFactor || 1.6;
+  K.timers.push(setTimeout(endChar, f * cfg.dashMs));
+  K.timers.push(setTimeout(endWord, Math.max(4, f * 2.5) * cfg.dashMs));
+}
+function keyUp() {
+  if (!K.down) return;
+  K.down = false;
+  toneOff();
+  $('keypad').classList.remove('down');
+  const dur = performance.now() - K.downAt;
+  cancelAnimationFrame(holdRaf);
+  if (dur < 15) { $('keypad').classList.remove('dot', 'dash'); if (K.sym) scheduleGaps(); return; }   // ignore accidental flicks
+  showHold(dur, true);
+  clearTimeout(idleTimer); idleTimer = setTimeout(padIdle, 2500);
+  if (M.on) { M.presses.push(Math.round(dur)); M.lastUp = performance.now(); }
+  const isDit = dur < cfg.dashMs;
+  K.sym += isDit ? '.' : '-';
+  $('lastPress').innerHTML = `Last press: <b class="${isDit ? 'dot' : 'dash'}">${isDit ? 'DOT' : 'DASH'}</b> (${(dur / 1000).toFixed(2)} sec)`;
+  K.recent.push(dur); if (K.recent.length > 16) K.recent.shift();
+  if (cfg.auto) learnTiming();
+  if (M.on) $('lastPress').innerHTML += ` &nbsp;·&nbsp; <b style="color:#00796b">Measuring: ${M.presses.length} presses</b>`;
+  renderSend();
+  scheduleGaps();
+}
+function endChar() {
+  if (!K.sym) return;
+  if (cfg.mode === 'learn') { const sym = K.sym, ch = DECODE[sym] || '*'; K.sym = ''; learnSent(ch, sym); return; }
+  K.text += DECODE[K.sym] || '*';
+  K.sym = '';
+  renderSend();
+}
+function endWord() { if (cfg.mode === 'learn') return; if (K.text && !K.text.endsWith(' ')) { K.text += ' '; renderSend(); } }
+
+const pad = $('keypad');
+pad.addEventListener('pointerdown', e => {
+  if (e.pointerType === 'mouse' && e.button !== 0) return;
+  e.preventDefault(); pad.setPointerCapture(e.pointerId); keyDown();
+});
+pad.addEventListener('pointerup', keyUp);
+pad.addEventListener('pointercancel', keyUp);
+pad.addEventListener('lostpointercapture', keyUp);
+pad.addEventListener('contextmenu', e => e.preventDefault());
+const keyingActive = () => cfg.mode === 'send' || (cfg.mode === 'learn' && (L.drill === 'send' || L.drill === 'msg'));
+document.addEventListener('keydown', e => {
+  if (!keyingActive() || e.code !== 'Space') return;
+  e.preventDefault(); if (!e.repeat) keyDown();
+});
+document.addEventListener('keyup', e => {
+  if (!keyingActive() || e.code !== 'Space') return;
+  e.preventDefault(); keyUp();
+});
+window.addEventListener('blur', keyUp);
+
+$('toggleShow').onclick = e => { K.show = !K.show; renderSend(); e.currentTarget.blur(); };
+$('clearSend').onclick = e => { K.text = ''; K.sym = ''; K.timers.forEach(clearTimeout); resetKeyer(); renderSend(); e.currentTarget.blur(); };
+
+// ================= MEASURE MY TIMING =================
+const M = { on: false, presses: [], gaps: [], lastUp: 0, rec: null };
+function measureStatus() {
+  $('lastPress').innerHTML = `<b style="color:#00796b">Measuring…</b> ${M.presses.length} presses recorded. Keep sending CQ, then press <b>Stop &amp; Analyze</b>.`;
+}
+const pct = (arr, q) => { const a = [...arr].sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(q * a.length))]; };
+const avg = a => a.reduce((s, x) => s + x, 0) / a.length;
+const geo = (x, y) => Math.sqrt(x * y);
+// split values into two groups (short / long) by clustering their logarithms
+function split2(vals) {
+  const logs = vals.map(Math.log);
+  let a = Math.min(...logs), b = Math.max(...logs);
+  for (let it = 0; it < 20; it++) {
+    const mid = (a + b) / 2, A = logs.filter(x => x < mid), B = logs.filter(x => x >= mid);
+    if (!A.length || !B.length) break;
+    a = avg(A); b = avg(B);
+  }
+  const cut = Math.exp((a + b) / 2);
+  return { short: vals.filter(v => v < cut), long: vals.filter(v => v >= cut) };
+}
+function split3(vals) {
+  const logs = vals.map(Math.log).sort((x, y) => x - y);
+  const lo = logs[0], hi = logs[logs.length - 1];
+  let c = [lo, (lo + hi) / 2, hi];
+  let groups = [[], [], []];
+  for (let it = 0; it < 25; it++) {
+    groups = [[], [], []];
+    logs.forEach(x => { let k = 0; c.forEach((ci, i) => { if (Math.abs(x - ci) < Math.abs(x - c[k])) k = i; }); groups[k].push(x); });
+    c = c.map((ci, i) => groups[i].length ? avg(groups[i]) : ci);
+  }
+  return groups.map(g => g.map(Math.exp));
+}
+const sec = ms => (ms / 1000).toFixed(2) + ' s';
+function analyze() {
+  const P = M.presses, G = M.gaps;
+  if (P.length < 8) return { error: 'Not enough presses recorded — send CQ at least 3 or 4 times.' };
+  const { short: dots, long: dashes } = split2(P);
+  if (!dots.length || !dashes.length) return { error: 'Could not tell dots from dashes apart — all presses were about the same length.' };
+  const dotMax = Math.max(...dots), dashMin = Math.min(...dashes);
+  // "clean" only if the longest dot is clearly shorter than the shortest dash
+  const overlap = dotMax * 1.15 >= dashMin;
+  const dashMs = Math.round(geo(dotMax, dashMin));
+  const r = { presses: P.length, dots: dots.length, dashes: dashes.length,
+    dot: { avg: avg(dots), min: Math.min(...dots), max: Math.max(...dots) },
+    dash: { avg: avg(dashes), min: Math.min(...dashes), max: Math.max(...dashes) },
+    ratio: avg(dashes) / avg(dots), overlap, dashMs, letterFactor: 1.6 };
+  if (G.length >= 6) {
+    const [inside, letterGaps, wordGaps] = split3(G);
+    const between = letterGaps.length ? letterGaps : wordGaps;
+    if (inside.length && between.length) {
+      const inHi = Math.max(...inside), btLo = Math.min(...between);
+      r.gapOverlap = inHi * 1.15 >= btLo;
+      const letterMs = geo(inHi, btLo);
+      r.gapInside = { avg: avg(inside), max: Math.max(...inside) };
+      r.gapBetween = { avg: avg(between), min: Math.min(...between) };
+      r.letterFactor = Math.round(Math.min(4, Math.max(1.1, letterMs / dashMs)) * 100) / 100;
+      r.letterMs = Math.round(r.letterFactor * dashMs);
+    }
+  }
+  return r;
+}
+function showAnalysis(r) {
+  const a = $('answer'); a.className = 'list'; a.style.fontSize = '28px'; a.style.letterSpacing = '0';
+  if (r.error) { a.innerHTML = `<span class="title">Measurement</span>${r.error}`; return; }
+  a.innerHTML = `<span class="title">Your timing — ${r.presses} presses (${r.dots} dots, ${r.dashes} dashes)</span>
+    Dots: average <b>${sec(r.dot.avg)}</b> (from ${sec(r.dot.min)} to ${sec(r.dot.max)})<br>
+    Dashes: average <b>${sec(r.dash.avg)}</b> (from ${sec(r.dash.min)} to ${sec(r.dash.max)})<br>
+    Dashes are <b>${r.ratio.toFixed(1)}×</b> as long as dots (ideal is 3×).
+    ${r.overlap ? '<br><b style="color:#c62828">Your longest dots are about as long as your shortest dashes — hold dashes clearly longer (about 3 times a dot).</b>' : ''}
+    ${r.gapOverlap ? '<br><b style="color:#c62828">Your pauses between letters are about the same as pauses inside a letter — pause a little longer between letters.</b>' : ''}
+    ${r.gapInside ? `<br>Pause inside a letter: average <b>${sec(r.gapInside.avg)}</b> (longest ${sec(r.gapInside.max)})<br>
+    Pause between letters/words: average <b>${sec(r.gapBetween.avg)}</b> (shortest ${sec(r.gapBetween.min)})` : ''}
+    ${(r.overlap || r.gapOverlap)
+      ? '<br><br><b>No setting can decode this reliably yet.</b> Work on the timing above, then measure again.'
+      : `<br><br><b>Recommended:</b> dash when held longer than <b>${sec(r.dashMs)}</b>${r.letterMs ? `, letter ends after a pause of <b>${sec(r.letterMs)}</b>` : ''}.`}
+    <div style="margin-top:16px">
+      ${(r.overlap || r.gapOverlap) ? '' : '<button class="big" id="applyRec" style="background:#1d7a3a;font-size:28px;min-width:0;padding:14px 26px">Use These Settings</button>'}
+      <button class="big" id="saveRec" style="background:#555;font-size:28px;min-width:0;padding:14px 26px">Save File for Claude</button>
+    </div>`;
+  if ($('applyRec')) $('applyRec').onclick = () => {
+    cfg.dashMs = r.dashMs; cfg.letterFactor = r.letterFactor; cfg.auto = false; showSendSettings();
+    $('applyRec').textContent = '✓ Applied (auto-learning turned OFF)';
+  };
+  $('saveRec').onclick = () => {
+    const data = { recorded: new Date().toISOString(), note: 'User sending CQ repeatedly',
+      settingsBefore: M.before, analysis: r, presses_ms: M.presses, gaps_ms: M.gaps };
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' }));
+    const link = document.createElement('a'); link.href = url; link.download = 'morse_measurements.json';
+    document.body.appendChild(link); link.click(); link.remove();
+    $('saveRec').textContent = '✓ Saved to Downloads';
+  };
+}
+$('measure').onclick = e => {
+  e.currentTarget.blur();
+  if (!M.on) {
+    Object.assign(M, { on: true, presses: [], gaps: [], lastUp: 0, before: { dashMs: cfg.dashMs, letterFactor: cfg.letterFactor || 1.6, auto: cfg.auto } });
+    $('measure').textContent = '■ Stop & Analyze';
+    $('answer').style.fontSize = ''; $('answer').style.letterSpacing = '';
+    K.text = ''; K.sym = ''; renderSend(); measureStatus();
+  } else {
+    M.on = false;
+    K.timers.forEach(clearTimeout); K.timers = []; K.sym = '';
+    $('measure').textContent = '📏 Measure My Timing';
+    $('lastPress').textContent = 'Last press: —';
+    showAnalysis(analyze());
+  }
+};
+function clearAnalysisStyle() { $('answer').style.fontSize = ''; $('answer').style.letterSpacing = ''; }
+
+// ================= LEARN =================
+// Lessons: two or three letters at a time, easiest/commonest first. Practice always mixes in earlier lessons.
+const LESSONS = ['ET', 'AN', 'IM', 'SO', 'RK', 'DU', 'GW', 'HB', 'CQ', 'LF', 'PY', 'VJ', 'XZ', '12345', '67890', '.,?/'];
+if (cfg.lesson === undefined) cfg.lesson = 0;
+if (!cfg.learnWpm) cfg.learnWpm = 15;
+if (cfg.showPat === undefined) cfg.showPat = true;
+const L = { drill: null, target: '', right: 0, total: 0, locked: true, timer: null, queue: [] };
+// A round = every letter learned so far, twice each, shuffled, never the same letter back-to-back.
+function buildQueue() {
+  const pool = poolLetters();
+  for (let tries = 0; tries < 50; tries++) {
+    const q = [...pool, ...pool];
+    for (let i = q.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [q[i], q[j]] = [q[j], q[i]]; }
+    if (pool.length < 2 || q.every((c, i) => i === 0 || c !== q[i - 1])) return q;
+  }
+  return [...pool, ...pool];
+}
+
+const pat = ch => MORSE[ch].split('').map(e => (e === '.' ? '•' : '—')).join(' ');
+const lessonLetters = () => LESSONS[cfg.lesson].split('');
+const poolLetters = () => LESSONS.slice(0, cfg.lesson + 1).join('').split('');
+function playLetter(ch) { audio(); stop(false); schedule(ch, cfg.learnWpm); }
+function pickLetter() {
+  const fresh = lessonLetters(), pool = poolLetters();
+  let ch;
+  do { ch = Math.random() < 0.55 ? pick(fresh) : pick(pool); } while (ch === L.target && pool.length > 1);
+  return ch;
+}
+function answerHTML(html, stack) { const a = $('answer'); a.className = stack ? 'stack' : ''; a.style.fontSize = ''; a.style.letterSpacing = ''; a.innerHTML = html; }
+
+function renderLearn() {
+  $('lessonTitle').innerHTML = `Lesson <b>${cfg.lesson + 1}</b> of ${LESSONS.length}`;
+  $('lessonPrev').disabled = cfg.lesson === 0;
+  $('lessonNext').disabled = cfg.lesson === LESSONS.length - 1;
+  const cards = $('cards'); cards.innerHTML = '';
+  lessonLetters().forEach(ch => {
+    const c = document.createElement('div'); c.className = 'lcard';
+    c.innerHTML = `<div class="ch">${ch}</div><div class="pt">${pat(ch)}</div><small>click to hear</small>`;
+    c.onclick = () => { playLetter(ch); answerHTML(`${ch}<span class="pat">${pat(ch)}</span>`); };
+    cards.appendChild(c);
+  });
+  $('lWpmVal').textContent = cfg.learnWpm + ' words/min';
+  $('patBtn').textContent = cfg.showPat ? 'ON' : 'OFF';
+  $('patBtn').style.background = cfg.showPat ? '#1d7a3a' : '#fff';
+  $('patBtn').style.color = cfg.showPat ? '#fff' : '#111';
+  renderChart();
+  renderWordInfo();
+  renderMsgInfo();
+  save();
+  if (!L.drill) {
+    const earlier = poolLetters().length - lessonLetters().length;
+    answerHTML(`<small>New letters: <b>${lessonLetters().join('  ')}</b>. Click each card to hear it.<br>
+      Then press <b>🎧 Hear &amp; Pick</b> or <b>🔑 See &amp; Send</b> — every letter ${earlier ? 'learned so far ' : ''}comes up twice (${poolLetters().length * 2} questions).</small>`, true);
+  }
+}
+function renderChart() {
+  const g = $('chart'); if (g.childElementCount) return;
+  Object.keys(MORSE).forEach(ch => {
+    const d = document.createElement('div');
+    d.innerHTML = `<b>${ch}</b><span>${pat(ch)}</span>`;
+    d.onclick = () => { playLetter(ch); answerHTML(`${ch}<span class="pat">${pat(ch)}</span>`); };
+    g.appendChild(d);
+  });
+}
+$('chartBtn').onclick = e => {
+  const c = $('chart'), open = c.style.display === 'none';
+  c.style.display = open ? '' : 'none';
+  e.currentTarget.textContent = open ? '📋 Hide All Letters' : '📋 Show All Letters';
+  e.currentTarget.blur();
+};
+$('lessonPrev').onclick = () => { if (cfg.lesson > 0) { stopDrill(); resetWords(); cfg.lesson--; renderLearn(); } };
+$('lessonNext').onclick = () => { if (cfg.lesson < LESSONS.length - 1) { stopDrill(); resetWords(); cfg.lesson++; renderLearn(); } };
+$('lSlower').onclick = () => { cfg.learnWpm = Math.max(5, cfg.learnWpm - 1); renderLearn(); };
+$('lFaster').onclick = () => { cfg.learnWpm = Math.min(30, cfg.learnWpm + 1); renderLearn(); };
+$('patBtn').onclick = e => { cfg.showPat = !cfg.showPat; renderLearn(); if (L.drill === 'listen') buildPicks(); e.currentTarget.blur(); };
+
+function drillUI(on) {
+  $('drillStart').style.display = on ? 'none' : '';
+  $('drillCtl').style.display = on && L.drill !== 'msg' ? '' : 'none';
+  $('msgCtl').style.display = on && L.drill === 'msg' ? '' : 'none';
+  $('cards').style.display = on ? 'none' : '';
+  $('wordBox').style.display = on ? 'none' : 'flex';
+  $('msgBox').style.display = on ? 'none' : 'flex';
+}
+function scoreLine() {
+  const n = L.queue.length;
+  $('drillScore').innerHTML = L.total ? `<b>${L.right}</b> of <b>${L.total}</b> right &nbsp;·&nbsp; question ${Math.min(L.total + 1, n)} of ${n}` : `Question 1 of ${n}`;
+}
+function stopDrill() {
+  clearTimeout(L.timer); silence(); if (typeof W !== 'undefined') clearTimeout(W.timer);
+  L.drill = null; L.locked = true;
+  if (typeof MS !== 'undefined') clearTimeout(MS.pendTimer);
+  document.body.classList.remove('drill-send');
+  $('pickGrid').innerHTML = ''; $('drillScore').innerHTML = '';
+  drillUI(false);
+}
+function finishRound() {
+  const pctRight = Math.round(100 * L.right / L.total);
+  const good = pctRight >= 90, last = cfg.lesson === LESSONS.length - 1;
+  const kind = L.drill;
+  stopDrill();
+  answerHTML(`<span class="${good ? 'ok' : 'no'}">${L.right} of ${L.total}</span>
+    <small>${good ? (last ? 'Excellent — you know them all!' : 'Great work! You are ready for the next lesson.') : 'Good practice. Try another round — aim for 90% or better.'}</small>`, true);
+  $('drillScore').innerHTML = good && !last
+    ? `<button class="big" id="goNext" style="background:#1d7a3a">Go to Lesson ${cfg.lesson + 2} ▶</button>`
+    : `<button class="big" id="again" style="background:${kind === 'send' ? '#b5541b' : '#1d7a3a'}">Practice Again</button>`;
+  if ($('goNext')) $('goNext').onclick = () => { cfg.lesson++; renderLearn(); $('drillScore').innerHTML = ''; };
+  if ($('again')) $('again').onclick = () => (kind === 'send' ? startSendDrill() : startListenDrill());
+}
+
+// --- Hear & Pick: a letter plays, click the matching button ---
+function buildPicks() {
+  const g = $('pickGrid'); g.innerHTML = '';
+  poolLetters().forEach(ch => {
+    const b = document.createElement('button'); b.className = 'pick'; b.dataset.ch = ch;
+    b.innerHTML = ch + (cfg.showPat ? `<small>${pat(ch)}</small>` : '');
+    b.onclick = () => { b.blur(); choose(ch, b); };
+    g.appendChild(b);
+  });
+}
+function startListenDrill() {
+  stopDrill();
+  Object.assign(L, { drill: 'listen', right: 0, total: 0, target: '', queue: buildQueue() });
+  drillUI(true); buildPicks(); nextListen();
+}
+function nextListen() {
+  if (L.total >= L.queue.length) { finishRound(); return; }
+  document.querySelectorAll('.pick').forEach(b => b.classList.remove('good', 'bad'));
+  L.target = L.queue[L.total]; L.locked = false;
+  answerHTML('?<small>Listen, then click the letter you heard</small>', true);
+  scoreLine();
+  L.timer = setTimeout(() => playLetter(L.target), 400);
+}
+function choose(ch, btn) {
+  if (L.locked || L.drill !== 'listen') return;
+  L.locked = true; L.total++;
+  const ok = ch === L.target;
+  if (ok) L.right++;
+  btn.classList.add(ok ? 'good' : 'bad');
+  if (!ok) document.querySelector(`.pick[data-ch="${CSS.escape(L.target)}"]`).classList.add('good');
+  answerHTML(ok
+    ? `<span class="ok">✓ ${L.target}</span><span class="pat ok">${pat(L.target)}</span>`
+    : `<span class="no">${L.target}</span><span class="pat no">${pat(L.target)}</span><small>That was <b>${L.target}</b> — you picked ${ch}. Listen again…</small>`, !ok);
+  scoreLine();
+  if (!ok) playLetter(L.target);
+  L.timer = setTimeout(nextListen, ok ? 1300 : 3000);
+}
+
+// --- See & Send: a letter is shown, key it on the pad ---
+function startSendDrill() {
+  stopDrill();
+  Object.assign(L, { drill: 'send', right: 0, total: 0, target: '', queue: buildQueue() });
+  document.body.classList.add('drill-send');
+  K.text = ''; K.sym = ''; K.timers.forEach(clearTimeout);
+  drillUI(true); nextSend();
+}
+function sendPrompt(extra = '') {
+  answerHTML(`${L.target}${cfg.showPat ? `<span class="pat">${pat(L.target)}</span>` : ''}${extra}`, !!extra);
+}
+function nextSend() {
+  if (L.total >= L.queue.length) { finishRound(); return; }
+  L.target = L.queue[L.total]; L.locked = false;
+  sendPrompt('<small>Send this letter on the key pad below</small>');
+  scoreLine();
+}
+function learnShowProgress() {           // called while keying in Learn mode
+  if (L.drill === 'msg') { renderMsg(); return; }
+  if (L.drill !== 'send' || L.locked) return;
+  const sym = K.sym.split('').map(e => (e === '.' ? '•' : '—')).join(' ');
+  sendPrompt(`<small>You are sending: <b style="color:#b5541b;font-size:36px">${sym || '…'}</b></small>`);
+}
+function learnSent(ch, sym) {
+  if (L.drill === 'msg') { msgReceive(sym); return; }
+  if (L.drill !== 'send' || L.locked) return;
+  L.locked = true; L.total++;
+  const ok = ch === L.target;
+  if (ok) L.right++;
+  answerHTML(ok
+    ? `<span class="ok">✓ ${L.target}</span><span class="pat ok">${pat(L.target)}</span>`
+    : `<span class="no">${L.target}</span><span class="pat no">${pat(L.target)}</span><small>You sent <b>${ch === '*' ? 'an unknown pattern' : ch + ' (' + pat(ch) + ')'}</b>. Here is how ${L.target} sounds…</small>`, !ok);
+  scoreLine();
+  if (!ok) playLetter(L.target);
+  L.timer = setTimeout(nextSend, ok ? 1300 : 3500);
+}
+
+// --- Practice Words: real words spelled only with letters learned so far ---
+const LEARN_WORDS = ('AT AN IN IT ME MAN MEN TEN TAN NET MAT ATE EAT TEA TIE TIN MINE TIME ITEM MEAT TEAM MEAN NAME ' +
+  'MAIN ANT NEAT TENT TEEN MET MAIM AIM AIMS MIST SIT SAT SET SEA SEAT EAST EATS TEAS STEM MOST NOTE TONE STONE ' +
+  'ONE ON NO NOT TO TOO SO SON SEEN SEE MOON SOON NOON MOM TOM NOSE SOME MOTION STATION NATION ' +
+  'RAT RAN RAIN TRAIN STAR START STORE MORE ORE ROSE RISE RIM TRIM TEAR EAR NEAR MARE MARK KEEP KIT KITE ' +
+  'TAKE MAKE RAKE SAKE KEEN KNEE KNOT SINK TANK RANK INK MINK TREK OAK SOAK ' +
+  'DUST DUE DO DONE DOT DOOR DARK DEAR DREAM DRUM DUNE DUSK MUD SUN RUN NUT TUNE UNIT UNDER USE AMUSE ' +
+  'GO GOT GOOD GAME GATE GIRT GUM GREAT GREEN WAG WAGON WE WET WIN WIND WINDOW WATER WARM WORD WORK SWIM ' +
+  'HE HER HIM HIS HAT HAM HOME HOUSE HOW WHAT WHEN WHERE THE THAT THIS THEM THEN THERE THREE BE BED BAT BIG ' +
+  'BIRD BOAT BOOK BROWN BEST BUT HAND HEAD HEAR HEART ' +
+  'CAT CAR CODE COME CAN COOK CORN CUT QUIET QUEEN QUICK QUOTE QUIT QUEST ' +
+  'LET LAKE LEAF LIFE LOVE FOR FROM FIRE FISH FAR FAST FILL FALL FELT FOOD FOOT FLAG FOUR FIVE ' +
+  'PEN PIE PLAY PULL PUT YES YOU YET YEAR YELLOW PAPER PEOPLE HAPPY PRAY ' +
+  'VERY VOTE VAN VOICE JOB JOIN JUST JUMP JOKE ' +
+  'BOX FOX SIX ZERO ZOO SIZE PRIZE ' +
+  'CQ DE ES TNX RST QTH OM UR FB GM GA GE HI HR HW PSE AGN RIG ANT WX TU SK K').split(' ');
+if (!cfg.learnWords) cfg.learnWords = 5;
+const W = { list: [], timer: null };
+function knownWords() {
+  const pool = new Set(poolLetters());
+  return LEARN_WORDS.filter(w => [...w].every(c => pool.has(c)));
+}
+function makeWordList() {
+  const words = knownWords(), pool = poolLetters(), out = [];
+  while (out.length < cfg.learnWords) {
+    let w;
+    if (words.length >= 6) w = pick(words);
+    else w = Array.from({ length: 2 + Math.floor(Math.random() * 3) }, () => pick(pool)).join('');   // too few real words yet
+    if (w !== out[out.length - 1]) out.push(w);
+  }
+  return out;
+}
+function renderWordInfo() {
+  const n = knownWords().length;
+  $('wordInfo').innerHTML = n >= 6
+    ? `Real words using only your letters (<b>${poolLetters().join(' ')}</b>) — ${n} words available`
+    : `Not many real words yet with <b>${poolLetters().join(' ')}</b> — you will hear short letter groups instead`;
+  $('wCountVal').textContent = cfg.learnWords + (cfg.learnWords === 1 ? ' word' : ' words');
+}
+function playWordList() {
+  audio(); stop(false); silence(); clearTimeout(W.timer);
+  const pause = Math.max(1.0, 7 * 1.2 / cfg.learnWpm);       // at least 1 second between words
+  let t = ctx.currentTime + 0.4;
+  W.list.forEach(w => { t = schedule(w, cfg.learnWpm, t) + pause; });
+  answerHTML(`🎧<small>Listening to ${W.list.length} word${W.list.length > 1 ? 's' : ''}… write them down or say them, then press <b>Show Answer</b></small>`, true);
+  $('wAgain').style.display = ''; $('wShow').style.display = '';
+  W.timer = setTimeout(() => answerHTML('<small>Finished. Press <b>Show Answer</b> to check, or <b>Repeat</b> to hear them again.</small>', true),
+                       (t - ctx.currentTime) * 1000);
+}
+$('wPlay').onclick = e => { e.currentTarget.blur(); stopDrill(); W.list = makeWordList(); playWordList(); };
+$('wAgain').onclick = e => { e.currentTarget.blur(); if (W.list.length) playWordList(); };
+$('wShow').onclick = e => {
+  e.currentTarget.blur(); if (!W.list.length) return;
+  clearTimeout(W.timer);
+  const a = $('answer'); a.className = 'list'; a.style.fontSize = ''; a.style.letterSpacing = '';
+  a.innerHTML = `<span class="title">The words were:</span>` + W.list.map(w => `<span class="item">${w}</span>`).join('');
+};
+$('wFewer').onclick = e => { e.currentTarget.blur(); cfg.learnWords = Math.max(1, cfg.learnWords - (cfg.learnWords > 10 ? 5 : 1)); save(); renderWordInfo(); };
+$('wMore').onclick = e => { e.currentTarget.blur(); cfg.learnWords = Math.min(50, cfg.learnWords + (cfg.learnWords >= 10 ? 5 : 1)); save(); renderWordInfo(); };
+function resetWords() { clearTimeout(W.timer); W.list = []; $('wAgain').style.display = 'none'; $('wShow').style.display = 'none'; }
+
+// --- Send a Message: key a generated text; every letter is tracked; report at the end ---
+if (!cfg.msgWords) cfg.msgWords = 5;
+if (!cfg.msgLen) cfg.msgLen = 4;
+if (!cfg.sendStats) cfg.sendStats = {};          // all-time: letter -> { n, wrong }
+const MS = { words: [], letters: [], pos: 0, results: [], pending: '', pendTimer: null, start: 0, end: 0, focus: [], last: '' };
+
+function renderMsgInfo() {
+  const fresh = lessonLetters().join(' ');
+  $('msgInfo').innerHTML = `The text uses only your letters, with extra practice on <b>${fresh}</b>. Every letter you send is checked, and you get a report at the end.`;
+  $('mWords').textContent = cfg.msgWords + (cfg.msgWords === 1 ? ' word' : ' words');
+  $('mLen').textContent = cfg.msgLen + ' letters';
+  $('mTotal').textContent = (cfg.msgWords * cfg.msgLen) + ' letters';
+}
+const stepUp = n => n + (n >= 10 ? 5 : 1), stepDown = n => n - (n > 10 ? 5 : 1);
+$('mWFewer').onclick = e => { e.currentTarget.blur(); cfg.msgWords = Math.max(1, stepDown(cfg.msgWords)); save(); renderMsgInfo(); };
+$('mWMore').onclick = e => { e.currentTarget.blur(); cfg.msgWords = Math.min(30, stepUp(cfg.msgWords)); save(); renderMsgInfo(); };
+$('mLFewer').onclick = e => { e.currentTarget.blur(); cfg.msgLen = Math.max(1, cfg.msgLen - 1); save(); renderMsgInfo(); };
+$('mLMore').onclick = e => { e.currentTarget.blur(); cfg.msgLen = Math.min(8, cfg.msgLen + 1); save(); renderMsgInfo(); };
+
+// Build the text: real words of the chosen length that contain a focus letter, else letter groups rich in focus letters.
+function makeMessage(focus) {
+  const pool = poolLetters(), fset = new Set(focus);
+  const real = knownWords().filter(w => w.length === cfg.msgLen && [...w].some(c => fset.has(c)));
+  const out = [];
+  while (out.length < cfg.msgWords) {
+    let w;
+    if (real.length >= 4 && Math.random() < 0.7) w = pick(real);
+    else {
+      const g = Array.from({ length: cfg.msgLen }, (_, i) => (i % 2 === 0 ? pick(focus) : pick(pool)));
+      for (let i = g.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [g[i], g[j]] = [g[j], g[i]]; }
+      w = g.join('');
+    }
+    if (w !== out[out.length - 1]) out.push(w);
+  }
+  return out;
+}
+function startMessage(focus) {
+  stopDrill(); resetWords();
+  Object.assign(L, { drill: 'msg', target: '' });
+  const words = makeMessage(focus && focus.length ? focus : lessonLetters());
+  Object.assign(MS, { words, letters: words.join('').split(''), pos: 0, results: [], pending: '', start: 0, end: 0, last: '',
+                      focus: focus && focus.length ? focus : lessonLetters() });
+  K.text = ''; K.sym = ''; K.timers.forEach(clearTimeout);
+  document.body.classList.add('drill-send');
+  drillUI(true);
+  $('drillScore').innerHTML = '';
+  renderMsg();
+}
+function renderMsg() {
+  let i = 0, html = '';
+  MS.words.forEach(w => {
+    html += '<span class="w">';
+    for (const ch of w) {
+      const r = MS.results[i];
+      const cls = r ? (r.ok ? 'ok' : 'bad') : (i === MS.pos ? 'cur' : '');
+      html += `<span class="l ${cls}">${ch}</span>`;
+      i++;
+    }
+    html += '</span>';
+  });
+  const done = MS.pos >= MS.letters.length;
+  const cur = MS.letters[MS.pos];
+  const live = (MS.pending + K.sym).split('').map(e => (e === '.' ? '•' : '—')).join(' ');
+  let info = '';
+  if (!done) {
+    info += `Letter ${MS.pos + 1} of ${MS.letters.length} &nbsp;·&nbsp; Next: <b class="mono" style="font-size:36px">${cur}</b>`;
+    if (cfg.showPat) info += ` <b style="color:#b5541b">${pat(cur)}</b>`;
+    if (live) info += ` &nbsp;·&nbsp; You are sending: <b style="color:#b5541b">${live}</b>`;
+  }
+  if (MS.last) info += `<br>${MS.last}`;
+  const a = $('answer'); a.className = 'msg'; a.style.fontSize = ''; a.style.letterSpacing = '';
+  a.innerHTML = html + `<span class="info">${info}</span>`;
+}
+// A decoded letter arrives (raw dot/dash string). If it is the start of the expected letter,
+// wait briefly in case the rest follows (a pause inside the letter), then judge it.
+function msgReceive(sym) {
+  if (MS.pos >= MS.letters.length) return;
+  if (!MS.start) MS.start = Date.now() - 1000;
+  clearTimeout(MS.pendTimer);
+  const s = MS.pending + sym, split = !!MS.pending;
+  MS.pending = '';
+  const expPat = MORSE[MS.letters[MS.pos]];
+  if (s !== expPat && expPat.startsWith(s)) {
+    MS.pending = s;
+    MS.pendTimer = setTimeout(() => { const p = MS.pending; MS.pending = ''; if (p) judge(p, false); }, 2.5 * cfg.dashMs);
+    renderMsg(); return;
+  }
+  judge(s, split);
+}
+function judge(s, split) {
+  const exp = MS.letters[MS.pos], expPat = MORSE[exp], next = MS.letters[MS.pos + 1];
+  if (next && s === expPat + MORSE[next]) {                 // two letters ran together but were right
+    MS.results[MS.pos] = { exp, sent: exp, sym: expPat, ok: true, joined: true };
+    MS.results[MS.pos + 1] = { exp: next, sent: next, sym: MORSE[next], ok: true, joined: true };
+    MS.pos += 2;
+    MS.last = `<span style="color:#b5541b">${exp} and ${next} ran together — leave a little more space between letters.</span>`;
+  } else {
+    const ok = s === expPat, sent = DECODE[s] || '?';
+    MS.results[MS.pos] = { exp, sent, sym: s, ok, split: split && ok };
+    MS.pos += 1;
+    MS.last = ok ? (split ? `<span style="color:#b5541b">${exp} ✓ — but you paused in the middle of it.</span>` : '')
+                 : `<span style="color:#c62828">✗ You sent <b>${sent === '?' ? 'an unknown pattern' : sent}</b> (${s.split('').map(e => (e === '.' ? '•' : '—')).join(' ')}) instead of <b>${exp}</b> (${pat(exp)})</span>`;
+  }
+  MS.end = Date.now();
+  renderMsg();
+  if (MS.pos >= MS.letters.length) setTimeout(msgReport, 900);
+}
+$('mUndo').onclick = e => {
+  e.currentTarget.blur();
+  clearTimeout(MS.pendTimer);
+  if (MS.pending) { MS.pending = ''; renderMsg(); return; }
+  if (MS.pos === 0) return;
+  MS.pos--;
+  if (MS.results[MS.pos] && MS.results[MS.pos].joined && MS.pos > 0 && MS.results[MS.pos - 1] && MS.results[MS.pos - 1].joined) {
+    MS.results[MS.pos] = undefined; MS.pos--;
+  }
+  MS.results[MS.pos] = undefined; MS.last = '';
+  renderMsg();
+};
+$('mFinish').onclick = e => { e.currentTarget.blur(); msgReport(); };
+
+function mistakeReason(sym, expPat) {
+  if (sym.length === expPat.length) return 'dots and dashes mixed up — check how long you hold each one';
+  if (sym.length < expPat.length && expPat.startsWith(sym)) return 'letter cut short — you may have paused inside the letter or stopped early';
+  if (sym.length > expPat.length && sym.startsWith(expPat)) return 'ran into the next letter — leave more space between letters';
+  if (sym.length < expPat.length) return 'missing a dot or dash';
+  return 'an extra dot or dash';
+}
+function msgReport() {
+  if (L.drill !== 'msg') return;
+  clearTimeout(MS.pendTimer);
+  const res = MS.results.filter(Boolean);
+  const total = res.length, right = res.filter(r => r.ok).length;
+  const words = MS.words.length, letters = MS.letters.length;
+  stopDrill();
+  if (!total) { renderLearn(); return; }
+
+  // per-letter summary + all-time stats
+  const by = {};
+  res.forEach(r => {
+    const b = by[r.exp] || (by[r.exp] = { n: 0, wrong: 0, as: {} });
+    b.n++;
+    if (!r.ok) { b.wrong++; const k = r.sent + '|' + r.sym; b.as[k] = (b.as[k] || 0) + 1; }
+    const st = cfg.sendStats[r.exp] || (cfg.sendStats[r.exp] = { n: 0, wrong: 0 });
+    st.n++; if (!r.ok) st.wrong++;
+  });
+  save();
+  const secs = Math.max(1, Math.round((MS.end - MS.start) / 1000));
+  const wpm = (total / 5) / (secs / 60);
+  const pctRight = Math.round(100 * right / total);
+  const weak = Object.entries(by).filter(([, b]) => b.wrong).sort((a, b) => b[1].wrong / b[1].n - a[1].wrong / a[1].n);
+  const perfect = Object.entries(by).filter(([, b]) => !b.wrong).map(([c]) => c);
+  const splits = res.filter(r => r.split).length, joins = res.filter(r => r.joined).length / 2;
+  const symTxt = sym => sym.split('').map(e => (e === '.' ? '•' : '—')).join(' ');
+
+  let html = `<h3>Session report</h3>
+    <div class="row">You sent <b>${total}</b> of ${letters} letters (${words} word${words > 1 ? 's' : ''}) in
+      <b>${secs >= 60 ? Math.floor(secs / 60) + ' min ' + (secs % 60) + ' s' : secs + ' s'}</b> — about <b>${wpm.toFixed(1)} words per minute</b>.</div>
+    <div class="row" style="font-size:36px"><b style="color:${pctRight >= 90 ? '#1d7a3a' : '#c62828'}">${right} of ${total} correct (${pctRight}%)</b></div>`;
+  if (weak.length) {
+    html += `<div class="row"><b>Letters to work on:</b></div>`;
+    weak.forEach(([c, b]) => {
+      const as = Object.entries(b.as).map(([k, n]) => {
+        const [sent, sym] = k.split('|');
+        return `sent <span class="mono">${sent === '?' ? '(unknown)' : sent}</span> <span class="pt">${symTxt(sym)}</span>${n > 1 ? ' ×' + n : ''} — ${mistakeReason(sym, MORSE[c])}`;
+      }).join('<br>&nbsp;&nbsp;&nbsp;&nbsp;');
+      const all = cfg.sendStats[c];
+      html += `<div class="row"><span class="mono" style="font-size:36px">${c}</span> <span class="pt">${pat(c)}</span>
+        &nbsp; wrong <b>${b.wrong} of ${b.n}</b> this time <span style="color:#777">(all-time ${all.wrong} of ${all.n})</span><br>&nbsp;&nbsp;&nbsp;&nbsp;${as}</div>`;
+    });
+  } else html += `<div class="row"><b style="color:#1d7a3a">No mistakes — excellent sending!</b></div>`;
+  if (perfect.length) html += `<div class="row">Perfect this time: <span class="mono">${perfect.join(' ')}</span></div>`;
+  if (splits) html += `<div class="row" style="color:#b5541b">${splits} time${splits > 1 ? 's' : ''} you paused in the middle of a letter. I counted ${splits > 1 ? 'them' : 'it'} as right, but a listener might hear two letters — keep pauses inside a letter short.</div>`;
+  if (joins) html += `<div class="row" style="color:#b5541b">${joins} time${joins > 1 ? 's' : ''} two letters ran together. Leave a little more space between letters.</div>`;
+
+  const a = $('answer'); a.className = 'report'; a.style.fontSize = ''; a.style.letterSpacing = '';
+  a.innerHTML = html; a.scrollTop = 0;
+  const weakLetters = weak.map(([c]) => c);
+  $('drillScore').innerHTML = (weakLetters.length ? `<button class="big" id="mWeak" style="background:#c62828">Practice ${weakLetters.join(' ')}</button> ` : '')
+    + `<button class="big" id="mNew" style="background:#00796b">New Message</button>`;
+  if ($('mWeak')) $('mWeak').onclick = () => startMessage(weakLetters);
+  $('mNew').onclick = () => startMessage();
+}
+$('mStart').onclick = e => { e.currentTarget.blur(); startMessage(); };
+
+$('drillListen').onclick = e => { e.currentTarget.blur(); startListenDrill(); };
+$('drillSend').onclick = e => { e.currentTarget.blur(); startSendDrill(); };
+$('hearAgain').onclick = e => { e.currentTarget.blur(); if (L.target) playLetter(L.target); };
+$('endDrill').onclick = e => { e.currentTarget.blur(); stopDrill(); renderLearn(); };
+
+// ================= MODE SWITCH =================
+function setMode(m) {
+  stop(false); keyUp(); stopDrill();
+  cfg.mode = m; save();
+  ['receive', 'send', 'learn'].forEach(x => document.body.classList.toggle('mode-' + x, x === m));
+  document.querySelectorAll('.mode').forEach(b => b.classList.toggle('on', b.dataset.mode === m));
+  if (m === 'send') { K.text = ''; K.sym = ''; renderSend(); }
+  else if (m === 'learn') renderLearn();
+  else { S.list = []; S.sent = []; setButtons(); showHint('Press the green button to begin'); }
+}
+document.querySelectorAll('.mode').forEach(b => b.onclick = () => { setMode(b.dataset.mode); b.blur(); });
+setMode(['send', 'learn'].includes(cfg.mode) ? cfg.mode : 'receive');
+</script>
+</body>
+</html>

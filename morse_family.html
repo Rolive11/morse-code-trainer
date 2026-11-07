@@ -1,0 +1,1461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Morse Code — Family Practice</title>
+<style>
+  /* ============ Base: light, large, high contrast ============ */
+  html { font-size: 22px; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #fffdf6; color: #111; font-family: Georgia, "Times New Roman", serif; }
+  main { max-width: 1150px; margin: 0 auto; padding: 1rem 1.2rem 3rem; }
+  h1 { font-size: 2.3rem; margin: .6rem 0 1.2rem; text-align: center; }
+  h2 { font-size: 1.9rem; margin: .4rem 0 1rem; text-align: center; }
+  h3 { font-size: 1.4rem; margin: 1.4rem 0 .6rem; }
+  p.lead { font-size: 1.25rem; text-align: center; color: #333; margin: 0 0 1.2rem; }
+  .note { font-size: 1.05rem; color: #555; text-align: center; margin: .6rem 0; }
+  .screen { display: none; }
+  .screen.on { display: block; }
+  .hidden { display: none !important; }
+
+  /* ============ Top bar ============ */
+  #topbar { display: flex; align-items: center; justify-content: space-between; gap: 1rem;
+            padding: .6rem 1.2rem; background: #f1ede0; border-bottom: 3px solid #333; }
+  #topbar .who { font-size: 1.3rem; }
+  .tbtn { font-family: inherit; font-size: 1.25rem; padding: .45rem 1.1rem; border-radius: .7rem;
+          border: 3px solid #333; background: #fff; color: #111; cursor: pointer; }
+
+  /* ============ Buttons ============ */
+  .row { display: flex; flex-wrap: wrap; gap: .9rem; justify-content: center; align-items: center; margin: 1rem 0; }
+  .btn { font-family: inherit; font-size: 1.6rem; font-weight: bold; padding: .75em 1.3em; border-radius: 1rem;
+         border: none; cursor: pointer; color: #fff; min-width: 9em; }
+  .btn:active { transform: scale(.97); }
+  .btn.go { background: #1d7a3a; } .btn.stop { background: #c62828; } .btn.info { background: #1f4fa8; }
+  .btn.grey { background: #666; } .btn.warm { background: #b5541b; } .btn.teal { background: #00796b; }
+  .btn.purple { background: #6a3d9a; }
+  .btn.small { font-size: 1.2rem; min-width: 0; padding: .55em 1em; }
+
+  /* Home / menu tiles */
+  .tiles { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; }
+  .tile { font-family: inherit; text-align: left; background: #fff; border: 4px solid #333; border-radius: 1.2rem;
+          padding: 1.1rem 1.4rem; cursor: pointer; color: #111; }
+  .tile:hover { background: #f6f2e4; }
+  .tile b { display: block; font-size: 2rem; margin-bottom: .3rem; }
+  .tile span { font-size: 1.15rem; color: #444; }
+  .tile.wide { grid-column: span 2; text-align: center; }
+
+  /* Users */
+  .people { display: flex; flex-wrap: wrap; gap: 1rem; justify-content: center; margin-bottom: 1.4rem; }
+  .person { font-family: inherit; font-size: 2rem; font-weight: bold; padding: .8em 1.6em; border-radius: 1.2rem;
+            border: 4px solid #1f4fa8; background: #fff; color: #1f4fa8; cursor: pointer; min-width: 7em; }
+  .person:hover { background: #e9effb; }
+  .editbox { display: flex; flex-direction: column; align-items: center; gap: .4rem; }
+  input[type=text] { font-family: inherit; font-size: 1.6rem; padding: .5em .7em; border: 3px solid #333;
+                     border-radius: .7rem; width: 14em; max-width: 90vw; }
+
+  /* Choices (chips) */
+  .chips { display: flex; flex-wrap: wrap; gap: .7rem; justify-content: center; margin: .6rem 0 1rem; }
+  .chip { font-family: inherit; font-size: 1.35rem; padding: .5em 1.1em; border-radius: .8rem; border: 3px solid #999;
+          background: #fff; color: #111; cursor: pointer; }
+  .chip.on { background: #1f4fa8; border-color: #1f4fa8; color: #fff; font-weight: bold; }
+
+  /* Steppers (settings-like rows) */
+  .steps { display: grid; grid-template-columns: auto auto auto auto; gap: .7rem 1rem; align-items: center;
+           justify-content: center; font-size: 1.35rem; margin: .8rem 0; }
+  .steps .label { text-align: right; }
+  .steps .val { font-weight: bold; text-align: center; min-width: 9em; }
+  .steps button { font-family: inherit; font-size: 1.2rem; padding: .45em 1em; border-radius: .7rem;
+                  border: 3px solid #555; background: #fff; cursor: pointer; min-width: 6.5em; }
+  .steps .sub { grid-column: 2 / span 3; font-size: 1rem; color: #666; margin-top: -.4rem; }
+  .toggle.on { background: #1d7a3a !important; color: #fff; border-color: #1d7a3a !important; }
+
+  /* Settings sections */
+  .section { background: #fff; border: 3px solid #ccc; border-radius: 1rem; padding: .6rem 1.2rem 1rem; margin-bottom: 1.2rem; }
+  .section h3 { margin-top: .6rem; }
+
+  /* ============ The answer / display box ============ */
+  .answer { width: 100%; min-height: 7rem; border: 4px solid #333; border-radius: 1rem; background: #fff;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center;
+            font-family: "Courier New", monospace; font-weight: bold; font-size: 2.9rem; letter-spacing: .25rem;
+            padding: 1rem; margin: .4rem 0 1rem; word-break: break-word; }
+  .answer.hint { font-family: Georgia, serif; font-weight: normal; font-size: 1.55rem; letter-spacing: 0; color: #444; }
+  .answer.count { font-family: Georgia, serif; font-size: 4rem; color: #1d7a3a; letter-spacing: 0; }
+  .answer.list { display: block; text-align: left; font-size: 1.8rem; line-height: 1.6; max-height: 55vh; overflow-y: auto; }
+  .answer.list .title, .answer .title { display: block; font-family: Georgia, serif; font-weight: normal; font-size: 1.2rem;
+                         letter-spacing: 0; color: #555; margin-bottom: .4rem; }
+  .answer.list .item { display: inline-block; margin-right: 1.5rem; }
+  .answer.list .cut { color: #999; }
+  .answer.typed { display: block; text-align: left; font-size: 2.3rem; line-height: 1.5; max-height: 40vh; overflow-y: auto; }
+  .answer .sym { color: #b5541b; }
+  .answer small { display: block; font-family: Georgia, serif; font-weight: normal; font-size: 1.25rem; letter-spacing: 0; color: #444; margin-top: .3rem; }
+  .answer .pat { color: #b5541b; margin-left: 1.3rem; }
+  .answer .ok { color: #1d7a3a; } .answer .no { color: #c62828; }
+  .answer.msg { display: block; text-align: left; font-size: 2.2rem; line-height: 1.9; }
+  .answer.msg .w { display: inline-block; margin-right: 1.7rem; white-space: nowrap; }
+  .answer.msg .l { padding: 0 .12rem; border-radius: .3rem; }
+  .answer.msg .l.good { color: #1d7a3a; }
+  .answer.msg .l.bad { color: #c62828; text-decoration: underline; }
+  .answer.msg .l.cur { background: #ffe9a8; outline: 3px solid #b5541b; }
+  .answer.msg .info, .answer .info { display: block; font-family: Georgia, serif; font-weight: normal; font-size: 1.25rem;
+                     letter-spacing: 0; color: #444; line-height: 1.5; margin-top: .3rem; }
+  .answer.report { display: block; text-align: left; font-family: Georgia, serif; font-weight: normal; font-size: 1.2rem;
+                   letter-spacing: 0; line-height: 1.5; max-height: 62vh; overflow-y: auto; }
+  .answer.report h4 { margin: .2rem 0 .5rem; font-size: 1.6rem; }
+  .answer.report .r { padding: .3rem 0; border-bottom: 1px solid #ddd; }
+  .answer.report .mono { font-family: "Courier New", monospace; font-weight: bold; }
+  .answer.report .pt { color: #b5541b; font-weight: bold; }
+
+  /* ============ Key pad ============ */
+  #keypadWrap { width: 100%; }
+  #keypad { width: 100%; height: 10rem; border-radius: 1rem; border: 5px dashed #777; background: #f1ede0;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 1.6rem; color: #333; cursor: pointer; user-select: none; -webkit-user-select: none; touch-action: none; }
+  #keypad.down { border-style: solid; }
+  #keypad.dot  { background: #d8f2df; border-color: #1d7a3a; }
+  #keypad.dash { background: #ffe0c4; border-color: #b5541b; }
+  #padText { font-size: 1.6rem; }
+  #keypad.dot #padText, #keypad.dash #padText, #padText.result { font-size: 3.3rem; font-weight: bold; letter-spacing: .3rem; }
+  #keypad.dot #padText, #padText.r-dot { color: #1d7a3a; }
+  #keypad.dash #padText, #padText.r-dash { color: #b5541b; }
+  #padSmall { font-size: 1.05rem; color: #666; margin-top: .2rem; }
+  #holdBar { position: relative; width: 70%; height: 1.3rem; background: #fff; border: 2px solid #777;
+             border-radius: .4rem; margin-top: .6rem; overflow: hidden; }
+  #holdFill { position: absolute; left: 0; top: 0; bottom: 0; width: 0; background: #1d7a3a; }
+  #holdFill.dash { background: #b5541b; }
+  #holdMark { position: absolute; left: 50%; top: 0; bottom: 0; width: 4px; margin-left: -2px; background: #111; }
+  #holdBar .zone { position: absolute; top: 0; bottom: 0; display: flex; align-items: center; justify-content: center;
+                   font-size: .8rem; color: #555; font-weight: bold; letter-spacing: 2px; }
+  #lastPress { font-size: 1.3rem; text-align: center; margin: .5rem 0; color: #333; min-height: 1.6rem; }
+  #lastPress b.dot { color: #1d7a3a; } #lastPress b.dash { color: #b5541b; }
+
+  /* ============ Learn ============ */
+  .lesson-nav { display: flex; align-items: center; justify-content: center; gap: 1rem; font-size: 1.5rem; margin-bottom: 1rem; }
+  .lesson-nav button { font-family: inherit; font-size: 1.25rem; padding: .4em 1em; border-radius: .6rem;
+                       border: 3px solid #555; background: #fff; cursor: pointer; }
+  .lesson-nav button:disabled { opacity: .35; cursor: default; }
+  .cards { display: flex; gap: .9rem; flex-wrap: wrap; justify-content: center; margin-bottom: 1rem; }
+  .lcard { background: #fff; border: 3px solid #333; border-radius: .9rem; padding: .5rem 1.3rem; text-align: center;
+           cursor: pointer; min-width: 7rem; }
+  .lcard:hover { border-color: #1d7a3a; }
+  .lcard .ch { font-size: 3.2rem; font-weight: bold; font-family: "Courier New", monospace; }
+  .lcard .pt { font-size: 2rem; letter-spacing: .2rem; color: #b5541b; font-weight: bold; }
+  .lcard small { font-size: .9rem; color: #666; }
+  .pickgrid { display: flex; flex-wrap: wrap; gap: .6rem; justify-content: center; margin-bottom: 1rem; }
+  .pick { font-family: "Courier New", monospace; font-size: 2rem; font-weight: bold; min-width: 4.8rem; padding: .4rem .7rem;
+          border-radius: .7rem; border: 3px solid #333; background: #fff; cursor: pointer; }
+  .pick small { display: block; font-size: 1rem; color: #b5541b; letter-spacing: 2px; }
+  .pick.good { background: #d8f2df; border-color: #1d7a3a; }
+  .pick.bad { background: #ffd6d0; border-color: #c62828; }
+  .pick:disabled { opacity: .5; cursor: default; }
+  .wordpick { font-family: "Courier New", monospace; font-size: 2.2rem; font-weight: bold; min-width: 9rem;
+              padding: .6rem 1rem; border-radius: .9rem; border: 4px solid #333; background: #fff; cursor: pointer; }
+  .wordpick.good { background: #d8f2df; border-color: #1d7a3a; }
+  .wordpick.bad { background: #ffd6d0; border-color: #c62828; }
+  .wordpick:disabled { cursor: default; }
+  #lnTypeWrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 1rem; }
+  #lnType { width: 6rem; height: 6rem; font-family: "Courier New", monospace; font-size: 4rem; font-weight: bold;
+            text-align: center; text-transform: uppercase; border: 5px solid #6a3d9a; border-radius: 1rem; padding: 0; caret-color: transparent; }
+  #lnType:focus { outline: 4px solid #e0d2f0; }
+  #lnTimer { width: 20rem; max-width: 80vw; height: .9rem; background: #eee; border: 2px solid #999; border-radius: .4rem; margin-top: .8rem; overflow: hidden; }
+  #lnTimerFill { height: 100%; width: 100%; background: #6a3d9a; }
+  .chartgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(8rem, 1fr)); gap: .5rem; margin-bottom: 1rem; }
+  .chartgrid div { background: #fff; border: 2px solid #999; border-radius: .5rem; padding: .3rem .7rem; cursor: pointer;
+                   display: flex; justify-content: space-between; align-items: center; }
+  .chartgrid b { font-family: "Courier New", monospace; font-size: 1.7rem; }
+  .chartgrid span { color: #b5541b; font-weight: bold; font-size: 1.3rem; letter-spacing: 2px; }
+  .divider { border-top: 3px solid #ddd; margin: 1.4rem 0 .6rem; }
+
+  @media (max-width: 800px) { .tiles { grid-template-columns: 1fr; } .tile.wide { grid-column: span 1; } }
+</style>
+</head>
+<body>
+
+<div id="topbar" class="hidden">
+  <button class="tbtn" id="backBtn">◀ Back</button>
+  <span class="who">👤 <b id="whoName"></b></span>
+  <button class="tbtn" id="switchBtn">Switch person</button>
+</div>
+
+<main>
+<!-- ===================== WHO IS PRACTICING ===================== -->
+<section class="screen" id="scr-users">
+  <h1>Who is practicing?</h1>
+  <div class="people" id="peopleList"></div>
+  <div class="row" id="addRow"><button class="btn go" id="addPersonBtn">➕ Add a person</button></div>
+  <div class="row hidden" id="addForm">
+    <input type="text" id="newName" placeholder="Type a name" maxlength="20" autocomplete="off">
+    <button class="btn go small" id="saveName">Save</button>
+    <button class="btn grey small" id="cancelName">Cancel</button>
+  </div>
+  <div class="row"><button class="tbtn" id="editPeopleBtn">Change or remove names</button></div>
+</section>
+
+<!-- ===================== HOME ===================== -->
+<section class="screen" id="scr-home">
+  <h1 id="hello"></h1>
+  <div class="tiles">
+    <button class="tile" data-go="listen"><b>🎧 Listen</b><span>Hear Morse code and copy it</span></button>
+    <button class="tile" data-go="send"><b>🔑 Send</b><span>Send Morse code with the key</span></button>
+    <button class="tile" data-go="learn"><b>📖 Learn</b><span>Learn the letters, a few at a time</span></button>
+    <button class="tile" data-go="check"><b>📏 Check My Skill</b><span>A quick test of your speed</span></button>
+    <button class="tile wide" data-go="settings"><b>⚙️ My Settings</b><span>Speed, sound, sending timing, text size</span></button>
+  </div>
+</section>
+
+<!-- ===================== LISTEN ===================== -->
+<section class="screen" id="scr-listen">
+  <h2>🎧 Listen</h2>
+  <div class="chips" id="lKinds">
+    <button class="chip" data-kind="letters">Letters</button>
+    <button class="chip" data-kind="words">Words</button>
+    <button class="chip" data-kind="calls">Call Signs</button>
+    <button class="chip" data-kind="sentences">Sentences</button>
+  </div>
+  <div class="answer hint" id="lAnswer">Press the green Start button to begin</div>
+  <div class="row">
+    <button class="btn go" id="lStart">▶ Start</button>
+    <button class="btn info hidden" id="lAgain">🔊 Play Again</button>
+    <button class="btn info hidden" id="lShow">Show Answer</button>
+    <button class="btn go hidden" id="lNext">Next ➜</button>
+    <button class="btn stop hidden" id="lStop">■ Stop</button>
+  </div>
+  <div class="steps" id="lOptions">
+    <span class="label">How many at a time</span>
+    <button id="lFewer">Fewer</button><span class="val" id="lCount"></span><button id="lMore">More</button>
+    <span class="label">Keep going until I press Stop</span>
+    <span></span><button class="toggle" id="lCont"></button><span></span>
+  </div>
+  <p class="note" id="lSpeedNote"></p>
+</section>
+
+<!-- ===================== SEND (menu) ===================== -->
+<section class="screen" id="scr-send">
+  <h2>🔑 Send</h2>
+  <div class="tiles">
+    <button class="tile" data-go="sendfree"><b>✏️ Send Freely</b><span>Send anything you like and see it written out</span></button>
+    <button class="tile" data-go="copy"><b>📄 Copy This Text</b><span>Send a message I give you — you get a report at the end</span></button>
+  </div>
+</section>
+
+<!-- ===================== SEND FREELY ===================== -->
+<section class="screen" id="scr-sendfree">
+  <h2>✏️ Send Freely</h2>
+  <div class="answer typed" id="fAnswer"></div>
+  <div id="fPad"></div>
+  <div class="row">
+    <button class="btn info" id="fToggle">Hide what I send</button>
+    <button class="btn grey" id="fClear">Start Over</button>
+  </div>
+</section>
+
+<!-- ===================== COPY THIS TEXT ===================== -->
+<section class="screen" id="scr-copy">
+  <h2>📄 Copy This Text</h2>
+  <div id="cSetup">
+    <p class="lead">I'll show you some text. Send it on the key, one letter at a time.<br>I'll check every letter and give you a report at the end.</p>
+    <div class="chips" id="cSource">
+      <button class="chip" data-src="all">All letters</button>
+      <button class="chip" data-src="learned">Only letters I have learned</button>
+    </div>
+    <div class="steps">
+      <span class="label">Number of words</span>
+      <button id="cWFewer">Fewer</button><span class="val" id="cWords"></span><button id="cWMore">More</button>
+      <span class="label">Letters per word</span>
+      <button id="cLFewer">Fewer</button><span class="val" id="cLen"></span><button id="cLMore">More</button>
+      <span class="label">Total</span><span></span><span class="val" id="cTotal"></span><span></span>
+    </div>
+    <div class="row"><button class="btn go" id="cStart">▶ Start Sending</button></div>
+  </div>
+  <div id="cRun" class="hidden">
+    <div class="answer msg" id="cAnswer"></div>
+    <div id="cPad"></div>
+    <div class="row">
+      <button class="btn grey" id="cUndo">⟲ Undo Last Letter</button>
+      <button class="btn teal" id="cFinish">🏁 Finish &amp; Report</button>
+    </div>
+  </div>
+  <div id="cReport" class="hidden">
+    <div class="answer report" id="cReportBox"></div>
+    <div class="row" id="cReportBtns"></div>
+  </div>
+</section>
+
+<!-- ===================== LEARN ===================== -->
+<section class="screen" id="scr-learn">
+  <h2>📖 Learn</h2>
+  <div class="lesson-nav">
+    <button id="lsPrev">◀ Back a lesson</button>
+    <span id="lsTitle"></span>
+    <button id="lsNext">Next lesson ▶</button>
+  </div>
+  <div class="answer hint" id="lnAnswer"></div>
+  <div id="lnHome">
+    <div class="cards" id="lnCards"></div>
+    <div class="row">
+      <button class="btn go" id="lnPick">🎧 Hear &amp; Pick</button>
+      <button class="btn warm" id="lnSend">🔑 See &amp; Send</button>
+      <button class="btn purple" id="lnTypeBtn">⌨️ Hear &amp; Type</button>
+    </div>
+    <div class="steps">
+      <span class="label">Hear &amp; Type: time to answer</span>
+      <button id="lnDwLess">Less</button><span class="val" id="lnDwell"></span><button id="lnDwMore">More</button>
+    </div>
+    <div class="divider"></div>
+    <h3 style="text-align:center">📝 Practice Words</h3>
+    <p class="note" id="lnWordInfo"></p>
+    <div class="row">
+      <button class="btn purple" id="lnWPlay">▶ Play Words</button>
+      <button class="btn info hidden" id="lnWAgain">🔊 Play Again</button>
+      <button class="btn info hidden" id="lnWShow">Show Answer</button>
+    </div>
+    <div class="steps">
+      <span class="label">How many words</span>
+      <button id="lnWFewer">Fewer</button><span class="val" id="lnWCount"></span><button id="lnWMore">More</button>
+    </div>
+    <div class="divider"></div>
+    <div class="row"><button class="btn grey small" id="lnChartBtn">📋 Show All Letters</button></div>
+    <div class="chartgrid hidden" id="lnChart"></div>
+  </div>
+  <div id="lnDrill" class="hidden">
+    <p class="note" id="lnScore"></p>
+    <div class="pickgrid" id="lnPicks"></div>
+    <div id="lnTypeWrap" class="hidden">
+      <input type="text" id="lnType" maxlength="1" autocomplete="off" autocorrect="off" autocapitalize="characters" spellcheck="false">
+      <div id="lnTimer"><div id="lnTimerFill"></div></div>
+    </div>
+    <div id="lnPad"></div>
+    <div class="row">
+      <button class="btn info" id="lnHear">🔊 Hear It Again</button>
+      <button class="btn grey" id="lnStop">Stop Practice</button>
+    </div>
+  </div>
+  <div id="lnDwellDone" class="steps hidden">
+    <span class="label">Time to answer</span>
+    <button id="lnDw2Less">Less time</button><span class="val" id="lnDwell2"></span><button id="lnDw2More">More time</button>
+  </div>
+  <div id="lnDone" class="row hidden"></div>
+</section>
+
+<!-- ===================== CHECK MY SKILL (menu) ===================== -->
+<section class="screen" id="scr-check">
+  <h2>📏 Check My Skill</h2>
+  <p class="lead">A quick, one-time check. Nothing is saved.</p>
+  <div class="tiles">
+    <button class="tile" data-go="checklisten"><b>🎧 Check My Listening</b><span>Words get faster until you miss. Just tap the word you heard — no typing.</span></button>
+    <button class="tile" data-go="checksend"><b>🔑 Check My Sending</b><span>Send “PARIS” three times. See your speed and how even your timing is.</span></button>
+  </div>
+</section>
+
+<!-- ===================== CHECK LISTENING ===================== -->
+<section class="screen" id="scr-checklisten">
+  <h2>🎧 Check My Listening</h2>
+  <p class="note" id="clStatus"></p>
+  <div class="answer hint" id="clAnswer"></div>
+  <div class="row" id="clChoices"></div>
+  <div class="row" id="clBtns"></div>
+</section>
+
+<!-- ===================== CHECK SENDING ===================== -->
+<section class="screen" id="scr-checksend">
+  <h2>🔑 Check My Sending</h2>
+  <div id="csIntro">
+    <p class="lead">You will send <b>PARIS PARIS PARIS</b> on the key.<br>Send at your normal, comfortable speed.</p>
+    <div class="row"><button class="btn go" id="csStart">▶ Begin</button></div>
+  </div>
+  <div id="csRun" class="hidden">
+    <div class="answer msg" id="csAnswer"></div>
+    <div id="csPad"></div>
+    <div class="row">
+      <button class="btn grey" id="csUndo">⟲ Undo Last Letter</button>
+      <button class="btn teal" id="csFinish">🏁 Finish</button>
+    </div>
+  </div>
+  <div id="csReport" class="hidden">
+    <div class="answer report" id="csReportBox"></div>
+    <div class="row" id="csReportBtns"></div>
+  </div>
+</section>
+
+<!-- ===================== MY SETTINGS ===================== -->
+<section class="screen" id="scr-settings">
+  <h2>⚙️ My Settings</h2>
+  <div class="section">
+    <h3>🎧 Listening</h3>
+    <div class="steps">
+      <span class="label">Speed</span>
+      <button id="sSlower">Slower</button><span class="val" id="sSpeed"></span><button id="sFaster">Faster</button>
+      <span class="label">Space between letters</span>
+      <button id="sSpLess">Less</button><span class="val" id="sSpace"></span><button id="sSpMore">More</button>
+      <span class="sub">Extra space gives you time to think. The letters themselves still sound the same.</span>
+      <span class="label">Tone</span>
+      <button id="sLower">Lower</button><span class="val" id="sPitch"></span><button id="sHigher">Higher</button>
+      <span class="label">Volume</span>
+      <button id="sSofter">Softer</button><span class="val" id="sVol"></span><button id="sLouder">Louder</button>
+      <span class="label">Wait before starting</span>
+      <button id="sWLess">Less</button><span class="val" id="sWait"></span><button id="sWMore">More</button>
+      <span class="label">Start with “CQ”</span>
+      <span></span><button class="toggle" id="sCQ"></button><span></span>
+    </div>
+    <div class="row"><button class="btn info small" id="sHear">🔊 Hear how it sounds</button></div>
+  </div>
+  <div class="section">
+    <h3>🔑 Sending</h3>
+    <p class="note" style="text-align:left">The easiest way: press <b>Set Up My Key</b>. You tap a few dots and dashes, and I set everything to fit your hands.</p>
+    <div class="row"><button class="btn teal" id="sSetup">🖐️ Set Up My Key</button></div>
+    <div class="steps">
+      <span class="label">A dash is a press longer than</span>
+      <button id="sDShort">Shorter</button><span class="val" id="sDash"></span><button id="sDLong">Longer</button>
+      <span class="sub" id="sDashSub"></span>
+      <span class="label">A letter ends after a pause of</span>
+      <button id="sLShort">Shorter</button><span class="val" id="sLetter"></span><button id="sLLong">Longer</button>
+      <span class="sub">If your letters break into pieces, make this longer. If letters run together, make it shorter.</span>
+      <span class="label">Adjust automatically while I send</span>
+      <span></span><button class="toggle" id="sAuto"></button><span></span>
+    </div>
+  </div>
+  <div class="section">
+    <h3>🖥️ Screen</h3>
+    <div class="steps">
+      <span class="label">Text size</span>
+      <button id="sTSmall">Smaller</button><span class="val" id="sText"></span><button id="sTBig">Bigger</button>
+      <span class="label">Show dot-dash patterns when learning</span>
+      <span></span><button class="toggle" id="sPat"></button><span></span>
+    </div>
+  </div>
+</section>
+
+<!-- ===================== SET UP MY KEY ===================== -->
+<section class="screen" id="scr-keysetup">
+  <h2>🖐️ Set Up My Key</h2>
+  <p class="note" id="ksStep"></p>
+  <div class="answer hint" id="ksAnswer"></div>
+  <div id="ksPad"></div>
+  <div class="row" id="ksBtns"></div>
+</section>
+</main>
+
+<!-- The one key pad; it is moved into whichever screen needs it -->
+<div id="keypadPark" class="hidden">
+  <div id="keypadWrap">
+    <div id="keypad">
+      <div id="padText">Press and hold here to send</div>
+      <div id="padSmall">— or hold down the Spacebar —</div>
+      <div id="holdBar"><div id="holdFill"></div><div id="holdMark"></div>
+        <span class="zone" style="left:0;width:50%">DOT</span><span class="zone" style="left:50%;width:50%">DASH</span></div>
+    </div>
+    <div id="lastPress"></div>
+  </div>
+</div>
+
+<script>
+// =====================================================================
+//  DATA
+// =====================================================================
+const MORSE = {
+  A:'.-',B:'-...',C:'-.-.',D:'-..',E:'.',F:'..-.',G:'--.',H:'....',I:'..',J:'.---',K:'-.-',L:'.-..',M:'--',
+  N:'-.',O:'---',P:'.--.',Q:'--.-',R:'.-.',S:'...',T:'-',U:'..-',V:'...-',W:'.--',X:'-..-',Y:'-.--',Z:'--..',
+  '0':'-----','1':'.----','2':'..---','3':'...--','4':'....-','5':'.....','6':'-....','7':'--...','8':'---..','9':'----.',
+  '.':'.-.-.-',',':'--..--','?':'..--..','/':'-..-.'
+};
+const DECODE = Object.fromEntries(Object.entries(MORSE).map(([k, v]) => [v, k]));
+const ALPHA = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+const WORDS = ('THE AND FOR YOU ALL CAN HAD HER WAS ONE OUT DAY HOW MAN NEW NOW OLD SEE TWO WAY WHO SAY SHE ' +
+  'THAT WITH HAVE THIS WILL YOUR FROM KNOW GOOD SOME TIME VERY WHEN COME HERE LIKE LONG MAKE MORE OVER ' +
+  'RADIO NAME SIGNAL POWER WEATHER SUNNY RAIN HOME CODE KEY SEND SOUND FRIEND FAMILY MORNING EVENING ' +
+  'COFFEE DINNER GARDEN WATER HOUSE NAVY ARMY SHIP PLANE TRAIN HAPPY THANKS BOOK DOOR TREE FISH BIRD ' +
+  'MILK BREAD CHAIR TABLE LIGHT NIGHT GREEN BLACK WHITE PAPER MUSIC SMILE HEART BREAD CLOCK RIVER').split(' ');
+const SENTENCES = [
+  'GOOD MORNING', 'HOW ARE YOU', 'THANKS FOR THE CALL', 'MY NAME IS BOB', 'THE WEATHER IS SUNNY',
+  'NICE TO MEET YOU', 'CQ CQ DE W1AW', 'UR RST 599', 'QTH IS OHIO', 'HAVE A GOOD DAY',
+  'SEE YOU AGAIN SOON', 'THE COFFEE IS HOT', 'IT IS RAINING HERE', 'MY RIG IS OLD BUT GOOD',
+  'THE BAND IS OPEN', 'BEST 73 TO YOU', 'I AM AT HOME', 'TIME FOR DINNER', 'THE SUN IS OUT', 'HAPPY BIRTHDAY'
+];
+// Words spelled only with learned letters (Learn / Copy This Text)
+const LEARN_WORDS = ('AT AN IN IT ME MAN MEN TEN TAN NET MAT ATE EAT TEA TIE TIN MINE TIME ITEM MEAT TEAM MEAN NAME ' +
+  'MAIN ANT NEAT TENT TEEN MET AIM AIMS MIST SIT SAT SET SEA SEAT EAST EATS TEAS STEM MOST NOTE TONE STONE ' +
+  'ONE ON NO NOT TO TOO SO SON SEEN SEE MOON SOON NOON MOM TOM NOSE SOME MOTION STATION NATION ' +
+  'RAT RAN RAIN TRAIN STAR START STORE MORE ORE ROSE RISE RIM TRIM TEAR EAR NEAR MARE MARK KEEP KIT KITE ' +
+  'TAKE MAKE RAKE KEEN KNEE KNOT SINK TANK RANK INK MINK TREK OAK SOAK ' +
+  'DUST DUE DO DONE DOT DOOR DARK DEAR DREAM DRUM DUNE DUSK MUD SUN RUN NUT TUNE UNIT UNDER USE AMUSE ' +
+  'GO GOT GOOD GAME GATE GUM GREAT GREEN WAG WAGON WE WET WIN WIND WINDOW WATER WARM WORD WORK SWIM ' +
+  'HE HER HIM HIS HAT HAM HOME HOUSE HOW WHAT WHEN WHERE THE THAT THIS THEM THEN THERE THREE BE BED BAT BIG ' +
+  'BIRD BOAT BOOK BROWN BEST BUT HAND HEAD HEAR HEART CAT CAR CODE COME CAN COOK CORN CUT QUIET QUEEN QUICK QUOTE QUIT ' +
+  'LET LAKE LEAF LIFE LOVE FOR FROM FIRE FISH FAR FAST FILL FALL FELT FOOD FOOT FLAG FOUR FIVE ' +
+  'PEN PIE PLAY PULL PUT YES YOU YET YEAR YELLOW PAPER PEOPLE HAPPY VERY VOTE VAN VOICE JOB JOIN JUST JUMP JOKE ' +
+  'BOX FOX SIX ZERO ZOO SIZE PRIZE CQ DE ES TNX RST QTH OM UR FB GM HI HR HW PSE AGN RIG WX TU SK').split(' ');
+const LESSONS = ['ET', 'AN', 'IM', 'SO', 'RK', 'DU', 'GW', 'HB', 'CQ', 'LF', 'PY', 'VJ', 'XZ', '12345', '67890', '.,?/'];
+
+const pick = a => a[Math.floor(Math.random() * a.length)];
+const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+const avg = a => a.reduce((s, x) => s + x, 0) / a.length;
+const geo = (x, y) => Math.sqrt(x * y);
+const pct = (arr, q) => { const a = [...arr].sort((x, y) => x - y); return a[Math.min(a.length - 1, Math.floor(q * a.length))]; };
+const pat = ch => MORSE[ch].split('').map(e => (e === '.' ? '•' : '—')).join(' ');
+const symTxt = s => s.split('').map(e => (e === '.' ? '•' : '—')).join(' ');
+const sec = ms => (ms / 1000).toFixed(2) + ' sec';
+const $ = id => document.getElementById(id);
+function callsign() {
+  const pre = pick(['K', 'W', 'N', 'W', 'K', 'AA', 'KA', 'WA', 'KB', 'WB', 'VE', 'G']);
+  let suf = ''; for (let i = 0, n = 1 + Math.floor(Math.random() * 3); i < n; i++) suf += pick(ALPHA);
+  return pre + Math.floor(Math.random() * 10) + suf;
+}
+
+// =====================================================================
+//  PEOPLE & SETTINGS (saved on this computer only)
+// =====================================================================
+const STORE = 'morseFamily.v1';
+const DEFAULTS = {
+  listen: { wpm: 15, space: 0, pitch: 600, volume: 70, delay: 3, cq: true, kind: 'words', count: 1, cont: false },
+  send:   { dashMs: 260, letterMs: 420, auto: false },
+  screen: { size: 22, showPat: true },
+  learn:  { lesson: 0, words: 5, dwell: 3 },
+  copy:   { words: 5, len: 4, src: 'learned' },
+};
+let DB = (() => { try { const d = JSON.parse(localStorage.getItem(STORE)); if (d && d.users) return d; } catch (e) {} return { users: {}, order: [], last: null }; })();
+let U = null;                     // current person: { name, s: settings }
+const S = () => U.s;              // shortcut to current settings
+function saveDB() { localStorage.setItem(STORE, JSON.stringify(DB)); }
+function fullSettings(s = {}) { const out = {}; for (const k in DEFAULTS) out[k] = { ...DEFAULTS[k], ...(s[k] || {}) }; return out; }
+function selectPerson(id) {
+  U = DB.users[id]; U.s = fullSettings(U.s); DB.last = id; saveDB();
+  document.documentElement.style.fontSize = S().screen.size + 'px';
+  $('whoName').textContent = U.name;
+  go('home');
+}
+
+// =====================================================================
+//  SOUND
+// =====================================================================
+let ctx, osc, gain;
+function audio() {
+  if (!ctx) {
+    ctx = new (window.AudioContext || window.webkitAudioContext)();
+    osc = ctx.createOscillator(); gain = ctx.createGain(); gain.gain.value = 0;
+    osc.connect(gain).connect(ctx.destination); osc.start();
+  }
+  if (ctx.state === 'suspended') ctx.resume();
+  osc.frequency.value = U ? S().listen.pitch : 600;
+}
+const vol = () => (U ? S().listen.volume : 70) / 100 * 0.6;
+function holdGain(t) { const p = gain.gain; if (p.cancelAndHoldAtTime) p.cancelAndHoldAtTime(t); else { p.cancelScheduledValues(t); p.setValueAtTime(p.value, t); } }
+function silence() { if (ctx) { const now = ctx.currentTime; gain.gain.cancelScheduledValues(now); gain.gain.setValueAtTime(0, now); } }
+function toneOn() { audio(); const t = ctx.currentTime; holdGain(t); gain.gain.setTargetAtTime(vol(), t, 0.003); }
+function toneOff() { if (!ctx) return; const t = ctx.currentTime; holdGain(t); gain.gain.setTargetAtTime(0, t, 0.003); }
+// Timing: character speed wpm; "space" 0/1/2 stretches only the gaps between letters and words.
+function gaps(wpm, space) {
+  const dit = 1.2 / wpm, eff = space === 0 ? wpm : space === 1 ? wpm * 0.7 : wpm * 0.5;
+  let cg = 3 * dit, wg = 7 * dit;
+  if (eff < wpm) { const ta = (60 * wpm - 37.2 * eff) / (eff * wpm); cg = 3 * ta / 19; wg = 7 * ta / 19; }
+  return { dit, cg, wg };
+}
+// Schedule text; returns the time it finishes. Pass startAt to queue after something else.
+function schedule(text, { wpm = S().listen.wpm, space = S().listen.space } = {}, startAt = null) {
+  audio();
+  const p = gain.gain, now = ctx.currentTime, v = vol(), r = 0.006, { dit, cg, wg } = gaps(wpm, space);
+  let t;
+  if (startAt === null) { p.cancelScheduledValues(now); p.setValueAtTime(0, now); t = now + 0.1; } else t = startAt;
+  [...text].forEach((ch, idx) => {
+    if (ch === ' ') { t += wg - cg; return; }
+    const code = MORSE[ch]; if (!code) return;
+    for (let i = 0; i < code.length; i++) {
+      const len = code[i] === '.' ? dit : 3 * dit;
+      p.setValueAtTime(0, t); p.linearRampToValueAtTime(v, t + r);
+      p.setValueAtTime(v, t + len - r); p.linearRampToValueAtTime(0, t + len);
+      t += len + (i < code.length - 1 ? dit : 0);
+    }
+    if (idx < text.length - 1) t += cg;
+  });
+  return t;
+}
+function playNow(text, opts) { stopAllTimers(); return schedule(text, opts); }
+
+// =====================================================================
+//  SCREENS & NAVIGATION
+// =====================================================================
+const PARENT = { home: 'users', listen: 'home', send: 'home', learn: 'home', check: 'home', settings: 'home',
+                 sendfree: 'send', copy: 'send', checklisten: 'check', checksend: 'check', keysetup: 'settings' };
+const ENTER = {}, LEAVE = {};
+let current = null;
+const timers = new Set();
+const later = (fn, ms) => { const t = setTimeout(() => { timers.delete(t); fn(); }, ms); timers.add(t); return t; };
+function stopAllTimers() { timers.forEach(clearTimeout); timers.clear(); silence(); }
+function go(name) {
+  if (current && LEAVE[current]) LEAVE[current]();
+  stopAllTimers(); detachKeypad();
+  document.querySelectorAll('.screen').forEach(s => s.classList.toggle('on', s.id === 'scr-' + name));
+  $('topbar').classList.toggle('hidden', name === 'users');
+  $('backBtn').textContent = PARENT[name] === 'users' ? '◀ Back' : '◀ Back';
+  $('backBtn').classList.toggle('hidden', name === 'home');
+  current = name;
+  if (ENTER[name]) ENTER[name]();
+  window.scrollTo(0, 0);
+}
+$('backBtn').onclick = () => go(PARENT[current] || 'home');
+$('switchBtn').onclick = () => go('users');
+document.querySelectorAll('[data-go]').forEach(b => b.onclick = () => go(b.dataset.go));
+document.addEventListener('click', e => { if (e.target.closest('button')) e.target.closest('button').blur(); });
+
+function setBox(el, html, cls = '') { el.className = 'answer ' + cls; el.innerHTML = html; }
+function stepper(minusId, plusId, get, set, min, max, step, render) {
+  $(minusId).onclick = () => { set(Math.max(min, get() - (typeof step === 'function' ? step(get(), -1) : step))); saveDB(); render(); };
+  $(plusId).onclick = () => { set(Math.min(max, get() + (typeof step === 'function' ? step(get(), 1) : step))); saveDB(); render(); };
+}
+const bigStep = (v, dir) => (dir > 0 ? (v >= 10 ? 5 : 1) : (v > 10 ? 5 : 1));
+function setToggle(id, on) { const b = $(id); b.textContent = on ? 'ON' : 'OFF'; b.classList.toggle('on', on); }
+function speedWords(w) { return (w <= 7 ? 'Very slow' : w <= 11 ? 'Slow' : w <= 17 ? 'Medium' : w <= 24 ? 'Fast' : 'Very fast') + ` (${w} words/min)`; }
+
+// =====================================================================
+//  WHO IS PRACTICING
+// =====================================================================
+let editingPeople = false;
+ENTER.users = () => { U = null; editingPeople = false; renderPeople(); $('addForm').classList.add('hidden'); $('addRow').classList.remove('hidden');
+  if (!DB.order.length) showAddForm(); };
+function renderPeople() {
+  const box = $('peopleList'); box.innerHTML = '';
+  if (!DB.order.length) box.innerHTML = '<p class="lead">No one here yet. Add the first person below.</p>';
+  DB.order.forEach(id => {
+    const p = DB.users[id];
+    if (!editingPeople) {
+      const b = document.createElement('button'); b.className = 'person'; b.textContent = p.name;
+      b.onclick = () => selectPerson(id); box.appendChild(b);
+    } else {
+      const d = document.createElement('div'); d.className = 'editbox';
+      d.innerHTML = `<div class="person" style="cursor:default">${p.name}</div>`;
+      const r = document.createElement('div'); r.className = 'row'; r.style.margin = '0';
+      const rn = document.createElement('button'); rn.className = 'btn info small'; rn.textContent = 'Rename';
+      rn.onclick = () => { const n = prompt('New name for ' + p.name + ':', p.name); if (n && n.trim()) { p.name = n.trim().slice(0, 20); saveDB(); renderPeople(); } };
+      const rm = document.createElement('button'); rm.className = 'btn stop small'; rm.textContent = 'Remove';
+      rm.onclick = () => { if (confirm(`Remove ${p.name} and all of ${p.name}'s settings?`)) { delete DB.users[id]; DB.order = DB.order.filter(x => x !== id); saveDB(); renderPeople(); } };
+      r.append(rn, rm); d.appendChild(r); box.appendChild(d);
+    }
+  });
+  $('editPeopleBtn').textContent = editingPeople ? 'Done changing names' : 'Change or remove names';
+  $('editPeopleBtn').classList.toggle('hidden', !DB.order.length);
+}
+function showAddForm() { $('addForm').classList.remove('hidden'); $('addRow').classList.add('hidden'); $('newName').value = ''; $('newName').focus(); }
+$('addPersonBtn').onclick = showAddForm;
+$('cancelName').onclick = () => { $('addForm').classList.add('hidden'); $('addRow').classList.remove('hidden'); };
+function addPerson() {
+  const name = $('newName').value.trim().slice(0, 20);
+  if (!name) { $('newName').focus(); return; }
+  let id; do { id = 'p' + Date.now().toString(36) + Math.random().toString(36).slice(2, 7); } while (DB.users[id]);
+  DB.users[id] = { name, s: fullSettings() }; DB.order.push(id); saveDB();
+  selectPerson(id);
+}
+$('saveName').onclick = addPerson;
+$('newName').addEventListener('keydown', e => { if (e.key === 'Enter') addPerson(); });
+$('editPeopleBtn').onclick = () => { editingPeople = !editingPeople; renderPeople(); };
+
+// =====================================================================
+//  HOME
+// =====================================================================
+ENTER.home = () => { $('hello').textContent = `Hello, ${U.name}`; };
+
+// =====================================================================
+//  KEY PAD + DECODER (shared by every sending screen)
+// =====================================================================
+// A screen "attaches" the pad with a target that receives events:
+//   raw: true  -> onPress(durationMs, gapBeforeMs)        (Set Up My Key: no decoding)
+//   otherwise  -> onSym(sym)  while keying, onLetter(sym, elements) when a letter ends, onWord()
+const KP = { down: false, downAt: 0, upAt: 0, sym: '', elems: [], timers: [], target: null, recent: [], raf: null, idle: null };
+function attachKeypad(containerId, target) {
+  $(containerId).appendChild($('keypadWrap'));
+  KP.target = target; KP.sym = ''; KP.elems = []; KP.upAt = 0; KP.recent = [];
+  KP.timers.forEach(clearTimeout); KP.timers = [];
+  $('lastPress').innerHTML = '';
+  padIdle();
+}
+function detachKeypad() {
+  keyUp();
+  KP.target = null; KP.timers.forEach(clearTimeout); KP.timers = [];
+  $('keypadPark').appendChild($('keypadWrap'));
+}
+function showHold(ms, final) {
+  const isDash = ms >= S().send.dashMs, pad = $('keypad'), txt = $('padText');
+  $('holdFill').style.width = Math.min(100, (ms / (2 * S().send.dashMs)) * 100) + '%';
+  $('holdFill').classList.toggle('dash', isDash);
+  if (!final) { pad.classList.toggle('dot', !isDash); pad.classList.toggle('dash', isDash); txt.className = ''; }
+  else { pad.classList.remove('dot', 'dash'); txt.className = 'result ' + (isDash ? 'r-dash' : 'r-dot'); }
+  txt.textContent = isDash ? 'DASH' : 'DOT';
+}
+function holdLoop() { if (!KP.down) return; showHold(performance.now() - KP.downAt, false); KP.raf = requestAnimationFrame(holdLoop); }
+function padIdle() { const t = $('padText'); t.className = ''; t.textContent = 'Press and hold here to send'; $('holdFill').style.width = '0'; $('keypad').classList.remove('dot', 'dash', 'down'); }
+function keyDown() {
+  if (KP.down || !KP.target) return;
+  KP.down = true;
+  const now = performance.now();
+  KP.gapBefore = KP.upAt ? now - KP.upAt : null;
+  KP.timers.forEach(clearTimeout); KP.timers = [];
+  if (KP.target.onKeyDown) KP.target.onKeyDown();
+  KP.downAt = now;
+  toneOn();
+  $('keypad').classList.add('down');
+  clearTimeout(KP.idle); cancelAnimationFrame(KP.raf); holdLoop();
+}
+function keyUp() {
+  if (!KP.down) return;
+  KP.down = false; toneOff(); cancelAnimationFrame(KP.raf);
+  $('keypad').classList.remove('down');
+  const now = performance.now(), dur = now - KP.downAt;
+  if (dur < 15) { $('keypad').classList.remove('dot', 'dash'); if (KP.sym) scheduleLetterEnd(); return; }   // accidental flick
+  KP.upAt = now;
+  if (!KP.target) return;
+  if (KP.target.raw) { KP.target.onPress(dur, KP.gapBefore); showRawHold(dur); return; }
+  showHold(dur, true);
+  clearTimeout(KP.idle); KP.idle = setTimeout(padIdle, 2500);
+  const isDot = dur < S().send.dashMs;
+  KP.elems.push({ dur, gap: KP.sym ? KP.gapBefore : null, gapBefore: KP.sym ? null : KP.gapBefore });
+  KP.sym += isDot ? '.' : '-';
+  $('lastPress').innerHTML = `Last press: <b class="${isDot ? 'dot' : 'dash'}">${isDot ? 'DOT' : 'DASH'}</b> (${(dur / 1000).toFixed(2)} sec)`;
+  KP.recent.push(dur); if (KP.recent.length > 16) KP.recent.shift();
+  if (S().send.auto) autoTiming();
+  if (KP.target.onSym) KP.target.onSym(KP.sym);
+  scheduleLetterEnd();
+}
+function showRawHold(dur) { $('holdFill').style.width = '0'; padIdle(); $('lastPress').innerHTML = `Press length: <b>${(dur / 1000).toFixed(2)} sec</b>`; }
+function scheduleLetterEnd() {
+  const L = S().send.letterMs;
+  KP.timers.push(setTimeout(endLetter, L));
+  KP.timers.push(setTimeout(() => KP.target && KP.target.onWord && KP.target.onWord(), Math.max(L * 2.4, L + 400)));
+}
+function endLetter() {
+  if (!KP.sym || !KP.target) return;
+  const sym = KP.sym, elems = KP.elems;
+  KP.sym = ''; KP.elems = [];
+  KP.target.onLetter && KP.target.onLetter(sym, elems);
+}
+// Optional: nudge the dot/dash boundary toward this person's natural split.
+function autoTiming() {
+  const logs = KP.recent.map(Math.log); if (logs.length < 4) return;
+  let a = Math.min(...logs), b = Math.max(...logs);
+  if (b - a < Math.log(1.8)) return;
+  for (let it = 0; it < 12; it++) { const m = (a + b) / 2, A = logs.filter(x => x < m), B = logs.filter(x => x >= m); if (!A.length || !B.length) return; a = avg(A); b = avg(B); }
+  if (b - a < Math.log(1.8)) return;
+  S().send.dashMs = Math.round(Math.min(1200, Math.max(70, 0.6 * S().send.dashMs + 0.4 * Math.exp((a + b) / 2)))); saveDB();
+}
+const pad = $('keypad');
+pad.addEventListener('pointerdown', e => { if (e.pointerType === 'mouse' && e.button !== 0) return; e.preventDefault(); pad.setPointerCapture(e.pointerId); keyDown(); });
+pad.addEventListener('pointerup', keyUp);
+pad.addEventListener('pointercancel', keyUp);
+pad.addEventListener('lostpointercapture', keyUp);
+pad.addEventListener('contextmenu', e => e.preventDefault());
+const typing = el => el && el.matches && el.matches('input, textarea, select');
+document.addEventListener('keydown', e => { if (!KP.target || e.code !== 'Space' || typing(e.target)) return; e.preventDefault(); if (!e.repeat) keyDown(); });
+document.addEventListener('keyup', e => { if (!KP.target || e.code !== 'Space' || typing(e.target)) return; e.preventDefault(); keyUp(); });
+window.addEventListener('blur', keyUp);
+
+// =====================================================================
+//  LISTEN
+// =====================================================================
+const LS = { list: [], sent: [], i: 0, cont: false, busy: false, cut: false, itemEnd: 0, cqDone: false, mode: 'idle' };
+ENTER.listen = () => {
+  document.querySelectorAll('#lKinds .chip').forEach(c => c.classList.toggle('on', c.dataset.kind === S().listen.kind));
+  renderListenOpts(); LS.list = []; LS.sent = []; LS.busy = false; listenButtons('idle');
+  setBox($('lAnswer'), 'Press the green <b>Start</b> button to begin', 'hint');
+  $('lSpeedNote').innerHTML = `Speed: <b>${speedWords(S().listen.wpm)}</b> — you can change this in ⚙️ My Settings.`;
+};
+LEAVE.listen = () => { LS.busy = false; };
+document.querySelectorAll('#lKinds .chip').forEach(c => c.onclick = () => {
+  if (LS.busy) return;
+  S().listen.kind = c.dataset.kind; saveDB(); ENTER.listen();
+});
+function renderListenOpts() {
+  $('lCount').textContent = S().listen.count === 1 ? '1 at a time' : S().listen.count + ' at a time';
+  setToggle('lCont', S().listen.cont);
+  $('lFewer').disabled = $('lMore').disabled = S().listen.cont;
+  $('lCount').style.opacity = S().listen.cont ? .4 : 1;
+}
+stepper('lFewer', 'lMore', () => S().listen.count, v => S().listen.count = v, 1, 50, bigStep, renderListenOpts);
+$('lCont').onclick = () => { if (LS.busy) return; S().listen.cont = !S().listen.cont; saveDB(); renderListenOpts(); };
+function listenItem() {
+  const k = S().listen.kind;
+  if (k === 'letters') return pick(Object.keys(MORSE).filter(c => /[A-Z0-9]/.test(c)));
+  if (k === 'calls') return callsign();
+  if (k === 'sentences') return pick(SENTENCES);
+  return pick(WORDS);
+}
+function listenList() { const out = []; while (out.length < S().listen.count) { const n = listenItem(); if (n !== out[out.length - 1]) out.push(n); } return out; }
+function listenButtons(state) {   // idle | running | done
+  const show = (id, on) => $(id).classList.toggle('hidden', !on);
+  show('lStart', state === 'idle' || (state === 'done' && LS.cont));
+  show('lAgain', state === 'done' && !LS.cont);
+  show('lShow', state === 'done' && !LS.cont);
+  show('lNext', state === 'done' && !LS.cont);
+  show('lStop', state === 'running');
+  $('lOptions').style.opacity = state === 'running' ? .4 : 1;
+}
+function listenBegin(list, cont) {
+  stopAllTimers();
+  Object.assign(LS, { list, sent: [], i: 0, cont, busy: true, cut: false, cqDone: !S().listen.cq });
+  listenButtons('running');
+  let left = S().listen.delay;
+  const tick = () => {
+    if (!LS.busy) return;
+    if (left <= 0) { listenNext(); return; }
+    setBox($('lAnswer'), `Get ready…  ${left}`, 'count'); left--; later(tick, 1000);
+  };
+  tick();
+}
+function listenPause() { const { dit } = gaps(S().listen.wpm, S().listen.space); return S().listen.kind === 'words' || S().listen.kind === 'letters' ? gaps(S().listen.wpm, S().listen.space).wg : Math.max(1.2, 10 * dit); }
+function listenNext() {
+  if (!LS.busy) return;
+  if (!LS.cqDone) {
+    LS.cqDone = true; setBox($('lAnswer'), 'Listening…  CQ', 'hint');
+    LS.itemEnd = schedule('CQ'); later(listenNext, (LS.itemEnd - ctx.currentTime + listenPause()) * 1000); return;
+  }
+  if (LS.cont && LS.i >= LS.list.length) { let n; do { n = listenItem(); } while (n === LS.list[LS.list.length - 1]); LS.list.push(n); }
+  if (LS.i >= LS.list.length) { listenFinish(); return; }
+  const item = LS.list[LS.i++]; LS.sent.push(item);
+  setBox($('lAnswer'), LS.cont ? `Listening…  (${LS.sent.length} sent)<small>Press <b>Stop</b> to see everything that was sent</small>`
+                               : LS.list.length > 1 ? `Listening…  ${LS.sent.length} of ${LS.list.length}` : 'Listening…', 'hint');
+  LS.itemEnd = schedule(item);
+  const more = LS.cont || LS.i < LS.list.length;
+  later(listenNext, (LS.itemEnd - ctx.currentTime + (more ? listenPause() : 0.2)) * 1000);
+}
+function listenShowList(title) {
+  if (LS.sent.length === 1 && !LS.cut) { setBox($('lAnswer'), (S().listen.cq ? 'CQ  ' : '') + LS.sent[0]); return; }
+  const items = LS.sent.map((w, i) => { const part = LS.cut && i === LS.sent.length - 1; return `<span class="item${part ? ' cut' : ''}">${w}${part ? ' (stopped)' : ''}</span>`; }).join('');
+  setBox($('lAnswer'), `<span class="title">${title} (${LS.sent.length}):</span>${S().listen.cq ? '<span class="item">CQ</span>' : ''}${items}`, 'list');
+}
+function listenFinish() {
+  LS.busy = false; listenButtons('done');
+  if (LS.cont) listenShowList('Everything that was sent');
+  else setBox($('lAnswer'), 'Press <b>Show Answer</b> to check', 'hint');
+}
+$('lStart').onclick = () => listenBegin(S().listen.cont ? [] : listenList(), S().listen.cont);
+$('lNext').onclick = () => listenBegin(listenList(), false);
+$('lAgain').onclick = () => listenBegin(LS.list, false);
+$('lShow').onclick = () => { if (LS.sent.length) listenShowList('This is what was sent'); };
+$('lStop').onclick = () => {
+  if (!LS.busy) return;
+  LS.cut = ctx && ctx.currentTime < LS.itemEnd && LS.sent.length > 0;
+  stopAllTimers(); LS.busy = false; listenButtons('done');
+  if (!LS.sent.length) { listenButtons('idle'); setBox($('lAnswer'), 'Stopped. Press <b>Start</b> to begin again', 'hint'); return; }
+  if (LS.cont) listenShowList('Everything that was sent');
+  else setBox($('lAnswer'), 'Stopped. Press <b>Show Answer</b> to check', 'hint');
+};
+
+// =====================================================================
+//  SEND FREELY
+// =====================================================================
+const FR = { text: '', show: true };
+ENTER.sendfree = () => {
+  FR.text = '';
+  attachKeypad('fPad', {
+    onSym: () => renderFree(),
+    onLetter: sym => { FR.text += DECODE[sym] || '*'; renderFree(); },
+    onWord: () => { if (FR.text && !FR.text.endsWith(' ')) { FR.text += ' '; renderFree(); } },
+  });
+  renderFree();
+};
+function renderFree() {
+  const box = $('fAnswer');
+  $('fToggle').textContent = FR.show ? 'Hide what I send' : 'Show what I sent';
+  if (FR.show) {
+    const live = symTxt(KP.sym);
+    setBox(box, (FR.text || (live ? '' : '<span class="title" style="font-size:1.4rem">Your letters will appear here</span>')) + (live ? `<span class="sym"> ${live}</span>` : ''), 'typed');
+    box.scrollTop = box.scrollHeight;
+  } else {
+    const n = FR.text.replace(/\s/g, '').length;
+    setBox(box, n ? `Sending… (hidden) — ${n} letter${n > 1 ? 's' : ''} so far` : 'Sending… (hidden)', 'hint');
+  }
+}
+$('fToggle').onclick = () => { FR.show = !FR.show; renderFree(); };
+$('fClear').onclick = () => { FR.text = ''; KP.sym = ''; KP.elems = []; renderFree(); };
+
+// =====================================================================
+//  COPY-TEXT ENGINE (used by "Copy This Text" and "Check My Sending")
+// =====================================================================
+// Tracks each letter; re-joins a letter split by a pause; separates two letters that ran together.
+function makeCopier(v) {   // v: { answer, onDone }
+  const M = { words: [], letters: [], starts: new Set(), pos: 0, res: [], pending: '', pendElems: [], pendTimer: null, start: 0, end: 0, last: '' };
+  function begin(words) {
+    Object.assign(M, { words, letters: words.join('').split(''), pos: 0, res: [], pending: '', pendElems: [], start: 0, end: 0, last: '' });
+    M.starts = new Set(); let i = 0; words.forEach(w => { M.starts.add(i); i += w.length; });
+    render();
+  }
+  function render() {
+    let i = 0, html = '';
+    M.words.forEach(w => {
+      html += '<span class="w">';
+      for (const ch of w) { const r = M.res[i]; html += `<span class="l ${r ? (r.ok ? 'good' : 'bad') : (i === M.pos ? 'cur' : '')}">${ch}</span>`; i++; }
+      html += '</span>';
+    });
+    let info = '';
+    if (M.pos < M.letters.length) {
+      const cur = M.letters[M.pos], live = symTxt(M.pending + KP.sym);
+      info = `Letter ${M.pos + 1} of ${M.letters.length} · Next: <b style="font-family:Courier New;font-size:1.6rem">${cur}</b>`;
+      if (S().screen.showPat) info += ` <b style="color:#b5541b">${pat(cur)}</b>`;
+      if (live) info += ` · You are sending: <b style="color:#b5541b">${live}</b>`;
+    }
+    if (M.last) info += `<br>${M.last}`;
+    setBox(v.answer, html + `<span class="info">${info}</span>`, 'msg');
+  }
+  function letter(sym, elems) {
+    if (M.pos >= M.letters.length) return;
+    if (!M.start) M.start = Date.now() - 800;
+    clearTimeout(M.pendTimer);
+    const s = M.pending + sym, el = M.pendElems.concat(elems), split = !!M.pending;
+    M.pending = ''; M.pendElems = [];
+    const expPat = MORSE[M.letters[M.pos]];
+    if (s !== expPat && expPat.startsWith(s)) {          // maybe a pause inside the letter: wait for the rest
+      M.pending = s; M.pendElems = el;
+      M.pendTimer = setTimeout(() => { const p = M.pending, pe = M.pendElems; M.pending = ''; M.pendElems = []; if (p) judge(p, pe, false); }, 1.6 * S().send.letterMs);
+      render(); return;
+    }
+    judge(s, el, split);
+  }
+  function judge(s, el, split) {
+    const exp = M.letters[M.pos], expPat = MORSE[exp], next = M.letters[M.pos + 1];
+    if (next && s === expPat + MORSE[next]) {
+      M.res[M.pos] = { exp, sent: exp, sym: expPat, ok: true, joined: true };
+      M.res[M.pos + 1] = { exp: next, sent: next, sym: MORSE[next], ok: true, joined: true };
+      M.pos += 2;
+      M.last = `<span style="color:#b5541b">${exp} and ${next} ran together — leave a little more space between letters.</span>`;
+    } else {
+      const ok = s === expPat, sent = DECODE[s] || '?';
+      M.res[M.pos] = { exp, sent, sym: s, ok, split: split && ok, elems: el, wordStart: M.starts.has(M.pos) };
+      M.pos += 1;
+      M.last = ok ? (split ? `<span style="color:#b5541b">${exp} ✓ — but you paused in the middle of it.</span>` : '')
+                  : `<span style="color:#c62828">✗ You sent <b>${sent === '?' ? 'an unknown pattern' : sent}</b> (${symTxt(s)}) instead of <b>${exp}</b> (${pat(exp)})</span>`;
+    }
+    M.end = Date.now(); render();
+    if (M.pos >= M.letters.length) setTimeout(() => v.onDone(M), 900);
+  }
+  function undo() {
+    clearTimeout(M.pendTimer);
+    if (M.pending) { M.pending = ''; M.pendElems = []; render(); return; }
+    if (!M.pos) return;
+    M.pos--;
+    if (M.res[M.pos] && M.res[M.pos].joined && M.pos > 0 && M.res[M.pos - 1] && M.res[M.pos - 1].joined) { M.res[M.pos] = undefined; M.pos--; }
+    M.res[M.pos] = undefined; M.last = ''; render();
+  }
+  function stop() { clearTimeout(M.pendTimer); }
+  const target = { onSym: () => render(), onLetter: letter, onKeyDown: () => { if (M.pending) clearTimeout(M.pendTimer); } };
+  return { M, begin, render, undo, stop, target };
+}
+function mistakeReason(sym, expPat) {
+  if (sym.length === expPat.length) return 'dots and dashes mixed up — check how long you hold each one';
+  if (sym.length < expPat.length && expPat.startsWith(sym)) return 'letter cut short — you may have paused inside the letter';
+  if (sym.length > expPat.length && sym.startsWith(expPat)) return 'ran into the next letter — leave more space between letters';
+  return sym.length < expPat.length ? 'missing a dot or dash' : 'an extra dot or dash';
+}
+function letterReport(M) {
+  const res = M.res.filter(Boolean), total = res.length, right = res.filter(r => r.ok).length;
+  const secs = Math.max(1, Math.round((M.end - M.start) / 1000)), wpm = (total / 5) / (secs / 60);
+  const by = {};
+  res.forEach(r => { const b = by[r.exp] || (by[r.exp] = { n: 0, wrong: 0, as: {} }); b.n++; if (!r.ok) { b.wrong++; const k = r.sent + '|' + r.sym; b.as[k] = (b.as[k] || 0) + 1; } });
+  const weak = Object.entries(by).filter(([, b]) => b.wrong).sort((a, b) => b[1].wrong / b[1].n - a[1].wrong / a[1].n);
+  const perfect = Object.entries(by).filter(([, b]) => !b.wrong).map(([c]) => c);
+  const pctRight = total ? Math.round(100 * right / total) : 0;
+  let html = `<div class="r">You sent <b>${total}</b> of ${M.letters.length} letters in <b>${secs >= 60 ? Math.floor(secs / 60) + ' min ' + (secs % 60) + ' sec' : secs + ' sec'}</b> — about <b>${wpm.toFixed(1)} words per minute</b>.</div>
+    <div class="r" style="font-size:1.6rem"><b style="color:${pctRight >= 90 ? '#1d7a3a' : '#c62828'}">${right} of ${total} correct (${pctRight}%)</b></div>`;
+  if (weak.length) {
+    html += `<div class="r"><b>Letters to work on:</b></div>`;
+    weak.forEach(([c, b]) => {
+      const as = Object.entries(b.as).map(([k, n]) => { const [sent, sym] = k.split('|'); return `sent <span class="mono">${sent === '?' ? '(unknown)' : sent}</span> <span class="pt">${symTxt(sym)}</span>${n > 1 ? ' ×' + n : ''} — ${mistakeReason(sym, MORSE[c])}`; }).join('<br>&nbsp;&nbsp;&nbsp;');
+      html += `<div class="r"><span class="mono" style="font-size:1.6rem">${c}</span> <span class="pt">${pat(c)}</span> &nbsp; wrong <b>${b.wrong} of ${b.n}</b><br>&nbsp;&nbsp;&nbsp;${as}</div>`;
+    });
+  } else if (total) html += `<div class="r"><b style="color:#1d7a3a">No mistakes — excellent sending!</b></div>`;
+  if (perfect.length) html += `<div class="r">Perfect: <span class="mono">${perfect.join(' ')}</span></div>`;
+  const splits = res.filter(r => r.split).length, joins = res.filter(r => r.joined).length / 2;
+  if (splits) html += `<div class="r" style="color:#b5541b">${splits} time${splits > 1 ? 's' : ''} you paused in the middle of a letter (counted as right, but a listener might hear two letters).</div>`;
+  if (joins) html += `<div class="r" style="color:#b5541b">${joins} time${joins > 1 ? 's' : ''} two letters ran together — leave a little more space between letters.</div>`;
+  return { html, weak: weak.map(([c]) => c), total };
+}
+
+// =====================================================================
+//  COPY THIS TEXT
+// =====================================================================
+const CP = makeCopier({ answer: $('cAnswer'), onDone: M => copyReport(M) });
+let cpFocus = null;
+const poolLetters = () => LESSONS.slice(0, S().learn.lesson + 1).join('').split('');
+const lessonLetters = () => LESSONS[S().learn.lesson].split('');
+ENTER.copy = () => { cpShow('setup'); renderCopySetup(); };
+LEAVE.copy = () => CP.stop();
+function cpShow(part) { ['cSetup', 'cRun', 'cReport'].forEach(id => $(id).classList.toggle('hidden', id !== { setup: 'cSetup', run: 'cRun', report: 'cReport' }[part])); }
+function renderCopySetup() {
+  const c = S().copy;
+  document.querySelectorAll('#cSource .chip').forEach(b => b.classList.toggle('on', b.dataset.src === c.src));
+  document.querySelector('#cSource [data-src="learned"]').textContent = `Only letters I have learned (Lesson ${S().learn.lesson + 1})`;
+  $('cWords').textContent = c.words + (c.words === 1 ? ' word' : ' words');
+  $('cLen').textContent = c.len + (c.len === 1 ? ' letter' : ' letters');
+  $('cTotal').textContent = (c.words * c.len) + ' letters';
+}
+document.querySelectorAll('#cSource .chip').forEach(b => b.onclick = () => { S().copy.src = b.dataset.src; saveDB(); renderCopySetup(); });
+stepper('cWFewer', 'cWMore', () => S().copy.words, v => S().copy.words = v, 1, 30, bigStep, renderCopySetup);
+stepper('cLFewer', 'cLMore', () => S().copy.len, v => S().copy.len = v, 1, 8, 1, renderCopySetup);
+function makeCopyText(focus) {
+  const c = S().copy, out = [];
+  const learned = c.src === 'learned';
+  const pool = learned ? poolLetters() : ALPHA.split('');
+  const fset = new Set(focus || (learned ? lessonLetters() : pool));
+  const source = learned ? LEARN_WORDS.filter(w => [...w].every(ch => pool.includes(ch))) : LEARN_WORDS.concat(WORDS);
+  const real = source.filter(w => w.length === c.len && [...w].some(ch => fset.has(ch)));
+  const focusArr = [...fset];
+  while (out.length < c.words) {
+    let w;
+    if (real.length >= 4 && Math.random() < 0.75) w = pick(real);
+    else w = shuffle(Array.from({ length: c.len }, (_, i) => (i % 2 === 0 ? pick(focusArr) : pick(pool)))).join('');
+    if (w !== out[out.length - 1]) out.push(w);
+  }
+  return out;
+}
+function copyStart(focus) {
+  cpFocus = focus || null;
+  cpShow('run');
+  attachKeypad('cPad', CP.target);
+  CP.begin(makeCopyText(focus));
+}
+$('cStart').onclick = () => copyStart();
+$('cUndo').onclick = () => CP.undo();
+$('cFinish').onclick = () => { CP.stop(); copyReport(CP.M); };
+function copyReport(M) {
+  if (current !== 'copy') return;
+  detachKeypad(); cpShow('report');
+  const r = letterReport(M);
+  setBox($('cReportBox'), `<h4>Your report</h4>` + (r.total ? r.html : 'No letters were sent.'), 'report');
+  const btns = $('cReportBtns'); btns.innerHTML = '';
+  if (r.weak.length) { const b = document.createElement('button'); b.className = 'btn stop'; b.textContent = 'Practice ' + r.weak.join(' '); b.onclick = () => copyStart(r.weak); btns.appendChild(b); }
+  const n = document.createElement('button'); n.className = 'btn go'; n.textContent = 'New Text'; n.onclick = () => copyStart(); btns.appendChild(n);
+  const s = document.createElement('button'); s.className = 'btn grey'; s.textContent = 'Change Settings'; s.onclick = () => { cpShow('setup'); renderCopySetup(); }; btns.appendChild(s);
+}
+
+// =====================================================================
+//  LEARN
+// =====================================================================
+const LN = { drill: null, queue: [], target: '', right: 0, total: 0, locked: true, words: [] };
+ENTER.learn = () => { learnHome(); };
+LEAVE.learn = () => { LN.drill = null; $('lnType').blur(); };
+function learnHome() {
+  LN.drill = null; detachKeypad();
+  const lv = S().learn.lesson;
+  $('lsTitle').innerHTML = `Lesson <b>${lv + 1}</b> of ${LESSONS.length}`;
+  $('lsPrev').disabled = lv === 0; $('lsNext').disabled = lv === LESSONS.length - 1;
+  $('lnHome').classList.remove('hidden'); $('lnDrill').classList.add('hidden'); $('lnDone').classList.add('hidden');
+  $('lnDwellDone').classList.add('hidden');
+  const cards = $('lnCards'); cards.innerHTML = '';
+  lessonLetters().forEach(ch => {
+    const c = document.createElement('div'); c.className = 'lcard';
+    c.innerHTML = `<div class="ch">${ch}</div><div class="pt">${pat(ch)}</div><small>click to hear</small>`;
+    c.onclick = () => { playNow(ch); setBox($('lnAnswer'), `${ch}<span class="pat">${pat(ch)}</span>`); };
+    cards.appendChild(c);
+  });
+  const earlier = poolLetters().length - lessonLetters().length;
+  setBox($('lnAnswer'), `<small>New letters: <b>${lessonLetters().join('  ')}</b> — click each card to hear it.<br>
+    Then practice with <b>Hear &amp; Pick</b> or <b>See &amp; Send</b>. Every letter ${earlier ? 'you have learned ' : ''}comes up twice.</small>`, 'hint');
+  renderLearnWords(); renderChart(); renderDwell();
+}
+$('lsPrev').onclick = () => { if (S().learn.lesson > 0) { S().learn.lesson--; saveDB(); stopAllTimers(); LN.words = []; learnHome(); } };
+$('lsNext').onclick = () => { if (S().learn.lesson < LESSONS.length - 1) { S().learn.lesson++; saveDB(); stopAllTimers(); LN.words = []; learnHome(); } };
+function renderChart() {
+  const g = $('lnChart'); if (g.childElementCount) return;
+  Object.keys(MORSE).forEach(ch => {
+    const d = document.createElement('div'); d.innerHTML = `<b>${ch}</b><span>${pat(ch)}</span>`;
+    d.onclick = () => { playNow(ch); setBox($('lnAnswer'), `${ch}<span class="pat">${pat(ch)}</span>`); window.scrollTo(0, 0); };
+    g.appendChild(d);
+  });
+}
+$('lnChartBtn').onclick = () => { const c = $('lnChart'), open = c.classList.toggle('hidden'); $('lnChartBtn').textContent = open ? '📋 Show All Letters' : '📋 Hide All Letters'; };
+
+// --- practice words (listen) ---
+const knownWords = () => { const pool = new Set(poolLetters()); return LEARN_WORDS.filter(w => [...w].every(c => pool.has(c))); };
+function renderLearnWords() {
+  const n = knownWords().length;
+  $('lnWordInfo').innerHTML = n >= 6 ? `Real words using only your letters — ${n} words to choose from.` : `Not many real words yet with your letters — you will hear short letter groups.`;
+  $('lnWCount').textContent = S().learn.words + (S().learn.words === 1 ? ' word' : ' words');
+  $('lnWAgain').classList.toggle('hidden', !LN.words.length); $('lnWShow').classList.toggle('hidden', !LN.words.length);
+}
+stepper('lnWFewer', 'lnWMore', () => S().learn.words, v => S().learn.words = v, 1, 50, bigStep, renderLearnWords);
+function playLearnWords() {
+  stopAllTimers();
+  const pause = Math.max(1.0, gaps(S().listen.wpm, S().listen.space).wg);
+  let t = null;
+  LN.words.forEach(w => { t = schedule(w, {}, t === null ? null : t + pause); });
+  setBox($('lnAnswer'), `🎧<small>Listening to ${LN.words.length} word${LN.words.length > 1 ? 's' : ''}… then press <b>Show Answer</b></small>`, 'hint');
+  later(() => setBox($('lnAnswer'), '<small>Finished. Press <b>Show Answer</b> to check, or <b>Play Again</b>.</small>', 'hint'), (t - ctx.currentTime) * 1000);
+  renderLearnWords();
+}
+$('lnWPlay').onclick = () => {
+  const words = knownWords(), pool = poolLetters(); LN.words = [];
+  while (LN.words.length < S().learn.words) {
+    const w = words.length >= 6 ? pick(words) : Array.from({ length: 2 + Math.floor(Math.random() * 3) }, () => pick(pool)).join('');
+    if (w !== LN.words[LN.words.length - 1]) LN.words.push(w);
+  }
+  playLearnWords();
+};
+$('lnWAgain').onclick = () => { if (LN.words.length) playLearnWords(); };
+$('lnWShow').onclick = () => { if (LN.words.length) { stopAllTimers(); setBox($('lnAnswer'), '<span class="title">The words were:</span>' + LN.words.map(w => `<span class="item">${w}</span>`).join(''), 'list'); } };
+
+// --- drills: every learned letter twice, shuffled, never twice in a row ---
+function buildQueue() {
+  const pool = poolLetters();
+  for (let t = 0; t < 50; t++) { const q = shuffle([...pool, ...pool]); if (pool.length < 2 || q.every((c, i) => !i || c !== q[i - 1])) return q; }
+  return [...pool, ...pool];
+}
+function drillStart(kind, queue) {
+  stopAllTimers();
+  Object.assign(LN, { drill: kind, queue: queue || buildQueue(), right: 0, total: 0, locked: true, answers: [] });
+  $('lnHome').classList.add('hidden'); $('lnDrill').classList.remove('hidden'); $('lnDone').classList.add('hidden');
+  $('lnDwellDone').classList.add('hidden');
+  $('lnPicks').innerHTML = '';
+  $('lnTypeWrap').classList.toggle('hidden', kind !== 'type');
+  $('lnHear').classList.toggle('hidden', kind === 'type');
+  if (kind === 'type') {
+    detachKeypad();
+  } else if (kind === 'pick') {
+    detachKeypad();
+    poolLetters().forEach(ch => {
+      const b = document.createElement('button'); b.className = 'pick'; b.dataset.ch = ch;
+      b.innerHTML = ch + (S().screen.showPat ? `<small>${pat(ch)}</small>` : '');
+      b.onclick = () => drillChoose(ch, b); $('lnPicks').appendChild(b);
+    });
+  } else {
+    attachKeypad('lnPad', { onSym: () => drillSendProgress(), onLetter: sym => drillSent(DECODE[sym] || '*') });
+  }
+  drillNext();
+}
+const HINT_QUESTIONS = 5;   // show dot-dash patterns for this many questions, then hide them
+const drillHints = () => S().screen.showPat && LN.total < HINT_QUESTIONS;
+function drillScore() {
+  const n = LN.queue.length;
+  let hint = '';
+  if (S().screen.showPat) hint = LN.total < HINT_QUESTIONS ? ` · patterns shown for the first ${HINT_QUESTIONS}` : ' · patterns now hidden — from memory!';
+  $('lnScore').innerHTML = `Question <b>${Math.min(LN.total + 1, n)}</b> of ${n} · <b>${LN.right}</b> right so far${hint}`;
+}
+function drillNext() {
+  if (LN.total >= LN.queue.length) { if (LN.drill === 'type') typeFinish(); else drillFinish(); return; }
+  LN.target = LN.queue[LN.total]; LN.locked = false;
+  if (LN.drill === 'type') { typeQuestion(); return; }
+  drillScore();
+  if (LN.drill === 'pick') {
+    document.querySelectorAll('.pick').forEach(b => { b.classList.remove('good', 'bad'); if (!drillHints()) { const sm = b.querySelector('small'); if (sm) sm.remove(); } });
+    setBox($('lnAnswer'), '?<small>Listen, then click the letter you heard</small>');
+    later(() => playNow(LN.target), 400);
+  } else {
+    setBox($('lnAnswer'), `${LN.target}${drillHints() ? `<span class="pat">${pat(LN.target)}</span>` : ''}<small>Send this letter on the key pad below</small>`);
+  }
+}
+function drillResult(ok, given) {
+  LN.locked = true; LN.total++; if (ok) LN.right++;
+  const t = LN.target;
+  setBox($('lnAnswer'), ok ? `<span class="ok">✓ ${t}</span><span class="pat ok">${pat(t)}</span>`
+    : `<span class="no">${t}</span><span class="pat no">${pat(t)}</span><small>${given} Here is how ${t} sounds…</small>`);
+  drillScore();
+  if (!ok) playNow(t);
+  later(drillNext, ok ? 1300 : 3200);
+}
+function drillChoose(ch, btn) {
+  if (LN.locked || LN.drill !== 'pick') return;
+  const ok = ch === LN.target;
+  btn.classList.add(ok ? 'good' : 'bad');
+  if (!ok) document.querySelector(`.pick[data-ch="${CSS.escape(LN.target)}"]`).classList.add('good');
+  drillResult(ok, `You picked ${ch}.`);
+}
+function drillSendProgress() {
+  if (LN.locked) return;
+  setBox($('lnAnswer'), `${LN.target}${drillHints() ? `<span class="pat">${pat(LN.target)}</span>` : ''}<small>You are sending: <b style="color:#b5541b">${symTxt(KP.sym) || '…'}</b></small>`);
+}
+function drillSent(ch) {
+  if (LN.locked || LN.drill !== 'send') return;
+  drillResult(ch === LN.target, `You sent ${ch === '*' ? 'an unknown pattern' : ch + ' (' + pat(ch) + ')'}.`);
+}
+function drillFinish() {
+  const kind = LN.drill, pctRight = Math.round(100 * LN.right / LN.total), good = pctRight >= 90, last = S().learn.lesson === LESSONS.length - 1;
+  LN.drill = null; detachKeypad();
+  $('lnDrill').classList.add('hidden'); $('lnDone').classList.remove('hidden');
+  setBox($('lnAnswer'), `<span class="${good ? 'ok' : 'no'}">${LN.right} of ${LN.total}</span>
+    <small>${good ? (last ? 'Excellent — you know them all!' : 'Great work! You are ready for the next lesson.') : 'Good practice. Try another round — aim for 90% or better.'}</small>`);
+  const d = $('lnDone'); d.innerHTML = '';
+  const mk = (txt, cls, fn) => { const b = document.createElement('button'); b.className = 'btn ' + cls; b.textContent = txt; b.onclick = fn; d.appendChild(b); };
+  if (good && !last) mk(`Go to Lesson ${S().learn.lesson + 2} ▶`, 'go', () => { S().learn.lesson++; saveDB(); learnHome(); });
+  mk('Practice Again', kind === 'send' ? 'warm' : 'go', () => drillStart(kind));
+  mk('Back to Lesson', 'grey', () => learnHome());
+}
+// --- Hear & Type: a letter plays, type it; moves on as soon as a key is pressed ---
+function renderDwell() { const d = S().learn.dwell, t = d + (d === 1 ? ' second' : ' seconds'); $('lnDwell').textContent = t; $('lnDwell2').textContent = t; }
+stepper('lnDwLess', 'lnDwMore', () => S().learn.dwell, v => S().learn.dwell = v, 1, 10, 0.5, renderDwell);
+stepper('lnDw2Less', 'lnDw2More', () => S().learn.dwell, v => S().learn.dwell = v, 1, 10, 0.5, renderDwell);
+let typeDeadline = null;
+function typeQuestion() {
+  const n = LN.queue.length;
+  $('lnScore').innerHTML = `Letter <b>${LN.total + 1}</b> of ${n} — type the letter you hear`;
+  setBox($('lnAnswer'), '🎧<small>Listen, then type the letter on your keyboard</small>', 'hint');
+  const box = $('lnType'); box.value = ''; box.style.borderColor = '#6a3d9a'; box.focus();
+  const fill = $('lnTimerFill'); fill.style.transition = 'none'; fill.style.width = '100%';
+  later(() => {
+    if (LN.drill !== 'type' || LN.locked) return;
+    const end = playNow(LN.target);
+    const wait = (end - ctx.currentTime) * 1000 + S().learn.dwell * 1000;
+    requestAnimationFrame(() => { fill.style.transition = `width ${wait}ms linear`; fill.style.width = '0%'; });
+    typeDeadline = later(() => typeAnswer(null), wait);
+  }, 350);
+}
+function typeAnswer(got) {
+  if (LN.drill !== 'type' || LN.locked) return;
+  LN.locked = true; clearTimeout(typeDeadline); timers.delete(typeDeadline);
+  LN.answers.push({ exp: LN.target, got });
+  if (got === LN.target) LN.right++;
+  LN.total++;
+  $('lnTimerFill').style.transition = 'none';
+  later(drillNext, got ? 350 : 600);    // a short beat so the typed letter is seen, then the next one
+}
+$('lnType').addEventListener('input', e => {
+  const ch = (e.target.value.slice(-1) || '').toUpperCase();
+  e.target.value = ch;
+  if (!ch || ch === ' ') { e.target.value = ''; return; }
+  typeAnswer(ch);
+});
+$('lnType').addEventListener('blur', () => { if (LN.drill === 'type') setTimeout(() => $('lnType').focus(), 0); });
+function typeFinish() {
+  const kind = 'type', total = LN.answers.length, right = LN.right;
+  const missed = LN.answers.filter(a => a.got !== a.exp);
+  LN.drill = null;
+  $('lnDrill').classList.add('hidden'); $('lnDone').classList.remove('hidden');
+  const pctRight = Math.round(100 * right / total);
+  let html = `<h4 style="color:${pctRight >= 90 ? '#1d7a3a' : '#c62828'}">${right} of ${total} right (${pctRight}%)</h4>`;
+  if (missed.length) {
+    const by = {};
+    missed.forEach(a => { (by[a.exp] = by[a.exp] || []).push(a.got); });
+    html += `<div class="r"><b>Letters you missed:</b></div>`;
+    Object.entries(by).forEach(([c, gots]) => {
+      const what = gots.map(g => g === null ? 'no answer in time' : `typed <span class="mono">${g}</span>`).join(', ');
+      html += `<div class="r"><span class="mono" style="font-size:1.6rem">${c}</span> &nbsp; missed ${gots.length} of 2 — ${what}</div>`;
+    });
+  } else html += `<div class="r"><b style="color:#1d7a3a">Every letter right — excellent!</b></div>`;
+  const slow = missed.filter(a => a.got === null).length;
+  if (slow) html += `<div class="r" style="color:#b5541b">${slow} time${slow > 1 ? 's' : ''} the time ran out. If that felt rushed, press <b>More time</b> below before practicing again.</div>`;
+  setBox($('lnAnswer'), html, 'report');
+  renderDwell(); $('lnDwellDone').classList.remove('hidden');
+  const d = $('lnDone'); d.innerHTML = '';
+  const mk = (txt, cls, fn) => { const b = document.createElement('button'); b.className = 'btn ' + cls; b.textContent = txt; b.onclick = fn; d.appendChild(b); };
+  const missedLetters = [...new Set(missed.map(a => a.exp))];
+  if (missedLetters.length) mk('Practice the ones I missed', 'stop', () => {
+    let q; for (let t = 0; t < 50; t++) { q = shuffle([...missedLetters, ...missedLetters]); if (missedLetters.length < 2 || q.every((c, i) => !i || c !== q[i - 1])) break; }
+    drillStart(kind, q);
+  });
+  mk('Practice Again', 'purple', () => drillStart(kind));
+  mk('Back to Lesson', 'grey', () => learnHome());
+}
+$('lnTypeBtn').onclick = () => drillStart('type');
+
+$('lnPick').onclick = () => drillStart('pick');
+$('lnSend').onclick = () => drillStart('send');
+$('lnHear').onclick = () => { if (LN.target) playNow(LN.target); };
+$('lnStop').onclick = () => { LN.drill = null; stopAllTimers(); learnHome(); };
+
+// =====================================================================
+//  CHECK MY LISTENING — speed ladder, tap the word you heard
+// =====================================================================
+const LADDER = [5, 6, 8, 10, 12, 14, 16, 18, 20, 22, 25, 28, 31, 35, 40];
+const CL = { level: 0, q: 0, right: 0, passed: null, word: '', locked: true };
+ENTER.checklisten = () => {
+  $('clStatus').textContent = '';
+  $('clChoices').innerHTML = '';
+  setBox($('clAnswer'), `<small>I'll play a word, then show four choices. Tap the one you heard.<br>
+    Every 3 words the speed goes up. The check ends when you miss 2 of 3.<br>Each word plays once.</small>`, 'hint');
+  $('clBtns').innerHTML = '';
+  const b = document.createElement('button'); b.className = 'btn go'; b.textContent = '▶ Begin';
+  let start = 0; LADDER.forEach((w, i) => { if (w <= Math.max(5, S().listen.wpm - 6)) start = i; });
+  b.onclick = () => { Object.assign(CL, { level: start, q: 0, right: 0, passed: null }); $('clBtns').innerHTML = ''; clQuestion(); };
+  $('clBtns').appendChild(b);
+};
+const clWords = () => [...new Set(WORDS.filter(w => w.length >= 3 && w.length <= 6))];
+function clQuestion() {
+  const wpm = LADDER[CL.level];
+  $('clStatus').innerHTML = `Speed: <b>${wpm} words per minute</b> · word ${CL.q + 1} of 3`;
+  const pool = clWords();
+  CL.word = pick(pool); CL.locked = true;
+  const others = shuffle(pool.filter(w => w !== CL.word && Math.abs(w.length - CL.word.length) <= 1)).slice(0, 3);
+  const choices = shuffle([CL.word, ...others]);
+  $('clChoices').innerHTML = '';
+  choices.forEach(w => {
+    const b = document.createElement('button'); b.className = 'wordpick'; b.textContent = w; b.disabled = true;
+    b.onclick = () => clAnswer(w, b); $('clChoices').appendChild(b);
+  });
+  setBox($('clAnswer'), '🎧 Listen…', 'hint');
+  later(() => {
+    const end = playNow(CL.word, { wpm, space: 0 });
+    later(() => { CL.locked = false; document.querySelectorAll('.wordpick').forEach(b => b.disabled = false); setBox($('clAnswer'), 'Which word did you hear?', 'hint'); },
+          (end - ctx.currentTime) * 1000 + 150);
+  }, 700);
+}
+function clAnswer(w, btn) {
+  if (CL.locked) return;
+  CL.locked = true;
+  const ok = w === CL.word; if (ok) CL.right++;
+  btn.classList.add(ok ? 'good' : 'bad');
+  document.querySelectorAll('.wordpick').forEach(b => { b.disabled = true; if (b.textContent === CL.word) b.classList.add('good'); });
+  setBox($('clAnswer'), ok ? '<span class="ok">✓ Right</span>' : `<span class="no">It was ${CL.word}</span>`);
+  CL.q++;
+  later(() => {
+    const wrong = CL.q - CL.right;
+    if (CL.q === 3 || wrong >= 2) {
+      if (CL.right >= 2) { CL.passed = LADDER[CL.level]; if (CL.level === LADDER.length - 1) return clResult(); CL.level++; CL.q = 0; CL.right = 0; clQuestion(); }
+      else clResult();
+    } else clQuestion();
+  }, ok ? 1000 : 1800);
+}
+function clResult() {
+  $('clChoices').innerHTML = ''; $('clStatus').textContent = '';
+  const p = CL.passed;
+  setBox($('clAnswer'), p ? `You copy reliably at<br><span class="ok" style="font-size:4rem">${p} words per minute</span>`
+    : `<small>The slowest speed (5 words per minute) was hard this time.<br>Try <b>📖 Learn</b> to practice the letters, then check again.</small>`, p ? '' : 'hint');
+  const d = $('clBtns'); d.innerHTML = '';
+  if (p && p !== S().listen.wpm) {
+    const u = document.createElement('button'); u.className = 'btn go'; u.textContent = `Use ${p} as my listening speed`;
+    u.onclick = () => { S().listen.wpm = p; saveDB(); u.textContent = '✓ Saved'; u.disabled = true; }; d.appendChild(u);
+  }
+  const a = document.createElement('button'); a.className = 'btn info'; a.textContent = 'Check Again'; a.onclick = () => ENTER.checklisten(); d.appendChild(a);
+}
+
+// =====================================================================
+//  CHECK MY SENDING — PARIS ×3, then speed and timing
+// =====================================================================
+const CS = makeCopier({ answer: $('csAnswer'), onDone: M => csReport(M) });
+ENTER.checksend = () => { csShow('intro'); };
+LEAVE.checksend = () => CS.stop();
+function csShow(part) { ['csIntro', 'csRun', 'csReport'].forEach(id => $(id).classList.toggle('hidden', id !== { intro: 'csIntro', run: 'csRun', report: 'csReport' }[part])); }
+$('csStart').onclick = () => { csShow('run'); attachKeypad('csPad', CS.target); CS.begin(['PARIS', 'PARIS', 'PARIS']); };
+$('csUndo').onclick = () => CS.undo();
+$('csFinish').onclick = () => { CS.stop(); csReport(CS.M); };
+// Work out timing from the letters that were sent correctly (we know which press was a dot or a dash).
+function timingFrom(res) {
+  const dots = [], dashes = [], inside = [], between = [];
+  res.filter(r => r && r.ok && r.elems && !r.joined).forEach(r => {
+    r.elems.forEach((e, k) => { (MORSE[r.exp][k] === '.' ? dots : dashes).push(e.dur); if (k > 0 && e.gap) inside.push(e.gap); });
+    if (!r.wordStart && r.elems[0].gapBefore && r.elems[0].gapBefore < 4000) between.push(r.elems[0].gapBefore);
+  });
+  return { dots, dashes, inside, between };
+}
+function recommend({ dots, dashes, inside, between }) {
+  if (dots.length < 2 || dashes.length < 2) return null;
+  const warn = [];
+  const dHi = pct(dots, 0.9), aLo = pct(dashes, 0.1);
+  let dashMs;
+  if (dHi * 1.15 < aLo) dashMs = geo(dHi, aLo);
+  else { dashMs = geo(avg(dots), avg(dashes)); warn.push('Some of your dots and dashes were close in length. Try holding dashes a little longer.'); }
+  let letterMs = Math.max(S().send.letterMs, dashMs * 1.5);
+  if (inside.length) {
+    const iHi = pct(inside, 0.9);
+    if (between.length) {
+      const bLo = pct(between, 0.1);
+      if (iHi * 1.15 < bLo) letterMs = geo(iHi, bLo);
+      else { letterMs = iHi * 1.5; warn.push('Your pauses between letters were about the same as inside a letter. Try pausing a little longer between letters.'); }
+    } else letterMs = Math.max(iHi * 1.6, dashMs * 1.3);
+  }
+  return { dashMs: Math.round(Math.min(1200, Math.max(70, dashMs))), letterMs: Math.round(Math.min(3000, Math.max(150, letterMs))), warn,
+           dot: avg(dots), dash: avg(dashes), wpm: 1.2 / (avg(dots) / 1000) };
+}
+function csReport(M) {
+  if (current !== 'checksend') return;
+  detachKeypad(); csShow('report');
+  const r = letterReport(M), t = recommend(timingFrom(M.res));
+  let html = `<h4>Your sending</h4>` + (r.total ? r.html : 'No letters were sent.');
+  if (t) {
+    html += `<div class="r"><b>Your timing:</b> dots about <b>${sec(t.dot)}</b>, dashes about <b>${sec(t.dash)}</b>
+      (dashes are ${(t.dash / t.dot).toFixed(1)}× a dot — 3× is ideal).</div>`;
+    t.warn.forEach(w => html += `<div class="r" style="color:#b5541b">${w}</div>`);
+    html += `<div class="r">Best settings for you: a dash is a press longer than <b>${sec(t.dashMs)}</b>; a letter ends after a pause of <b>${sec(t.letterMs)}</b>.</div>`;
+  }
+  setBox($('csReportBox'), html, 'report');
+  const d = $('csReportBtns'); d.innerHTML = '';
+  if (t) { const u = document.createElement('button'); u.className = 'btn go'; u.textContent = 'Use These Settings';
+    u.onclick = () => { S().send.dashMs = t.dashMs; S().send.letterMs = t.letterMs; S().send.auto = false; saveDB(); u.textContent = '✓ Saved'; u.disabled = true; }; d.appendChild(u); }
+  const a = document.createElement('button'); a.className = 'btn info'; a.textContent = 'Check Again'; a.onclick = () => csShow('intro'); d.appendChild(a);
+}
+
+// =====================================================================
+//  MY SETTINGS
+// =====================================================================
+ENTER.settings = () => renderSettings();
+function renderSettings() {
+  const l = S().listen, s = S().send, sc = S().screen;
+  $('sSpeed').textContent = speedWords(l.wpm);
+  $('sSpace').textContent = ['Normal', 'More', 'Most'][l.space];
+  $('sPitch').textContent = l.pitch <= 500 ? `Low (${l.pitch})` : l.pitch <= 700 ? `Medium (${l.pitch})` : `High (${l.pitch})`;
+  $('sVol').textContent = l.volume + '%';
+  $('sWait').textContent = l.delay === 0 ? 'No wait' : l.delay + (l.delay === 1 ? ' second' : ' seconds');
+  setToggle('sCQ', l.cq);
+  $('sDash').textContent = sec(s.dashMs);
+  $('sDashSub').textContent = `Quick taps count as dots; a press held longer than this is a dash. That suits sending at about ${Math.max(1, Math.round(1.2 / (s.dashMs / 1000 / 1.73)))} words per minute.`;
+  $('sLetter').textContent = sec(s.letterMs);
+  setToggle('sAuto', s.auto);
+  $('sText').textContent = sc.size <= 20 ? 'Normal' : sc.size <= 24 ? 'Large' : sc.size <= 28 ? 'Extra large' : 'Huge';
+  setToggle('sPat', sc.showPat);
+  document.documentElement.style.fontSize = sc.size + 'px';
+}
+stepper('sSlower', 'sFaster', () => S().listen.wpm, v => S().listen.wpm = v, 5, 40, 1, renderSettings);
+stepper('sSpLess', 'sSpMore', () => S().listen.space, v => S().listen.space = v, 0, 2, 1, renderSettings);
+stepper('sLower', 'sHigher', () => S().listen.pitch, v => S().listen.pitch = v, 400, 900, 50, () => { renderSettings(); playNow('E'); });
+stepper('sSofter', 'sLouder', () => S().listen.volume, v => S().listen.volume = v, 10, 100, 10, () => { renderSettings(); playNow('E'); });
+stepper('sWLess', 'sWMore', () => S().listen.delay, v => S().listen.delay = v, 0, 30, 1, renderSettings);
+stepper('sDShort', 'sDLong', () => S().send.dashMs, v => S().send.dashMs = v, 70, 1200, 20, renderSettings);
+stepper('sLShort', 'sLLong', () => S().send.letterMs, v => S().send.letterMs = v, 150, 3000, 30, renderSettings);
+stepper('sTSmall', 'sTBig', () => S().screen.size, v => S().screen.size = v, 18, 32, 2, renderSettings);
+$('sCQ').onclick = () => { S().listen.cq = !S().listen.cq; saveDB(); renderSettings(); };
+$('sAuto').onclick = () => { S().send.auto = !S().send.auto; saveDB(); renderSettings(); };
+$('sPat').onclick = () => { S().screen.showPat = !S().screen.showPat; saveDB(); renderSettings(); };
+$('sHear').onclick = () => playNow('CQ CQ DE ' + (U.name.toUpperCase().replace(/[^A-Z0-9]/g, '') || 'ME'));
+$('sSetup').onclick = () => go('keysetup');
+
+// =====================================================================
+//  SET UP MY KEY — measure this person's dots, dashes and pauses
+// =====================================================================
+const KS = { step: 0, dots: [], dashes: [], sPress: [], sGaps: [] };
+const KS_STEPS = [
+  { title: 'Step 1 of 3', say: 'Tap <b>5 short dots</b> — quick taps, the way you normally send a dot.', need: 5 },
+  { title: 'Step 2 of 3', say: 'Now press <b>5 long dashes</b> — hold each one, the way you normally send a dash.', need: 5 },
+  { title: 'Step 3 of 3', say: 'Send the letter <b>S</b> (• • •) <b>three times</b>, with a normal pause between each S.', need: 9 },
+];
+ENTER.keysetup = () => { Object.assign(KS, { step: 0, dots: [], dashes: [], sPress: [], sGaps: [] }); ksRender(); attachKeypad('ksPad', { raw: true, onPress: ksPress }); };
+function ksRender() {
+  const st = KS_STEPS[KS.step], got = [KS.dots, KS.dashes, KS.sPress][KS.step].length;
+  $('ksStep').innerHTML = `<b>${st.title}</b>`;
+  const marks = KS.step === 0 ? '• '.repeat(got) : KS.step === 1 ? '— '.repeat(got) : Array.from({ length: got }, (_, i) => '•' + ((i + 1) % 3 === 0 ? '   ' : ' ')).join('');
+  setBox($('ksAnswer'), `<small style="font-size:1.5rem">${st.say}</small><div style="color:#b5541b;margin-top:.5rem;min-height:3.5rem">${marks}</div><small>${got} of ${st.need}</small>`);
+  const d = $('ksBtns'); d.innerHTML = '';
+  const r = document.createElement('button'); r.className = 'btn grey'; r.textContent = '⟲ Start this step again';
+  r.onclick = () => { [KS.dots, KS.dashes, KS.sPress][KS.step].length = 0; if (KS.step === 2) KS.sGaps = []; ksRender(); }; d.appendChild(r);
+}
+function ksPress(dur, gap) {
+  if (KS.step === 0) KS.dots.push(dur);
+  else if (KS.step === 1) KS.dashes.push(dur);
+  else { if (KS.sPress.length) KS.sGaps.push(gap); KS.sPress.push(dur); }
+  const st = KS_STEPS[KS.step], got = [KS.dots, KS.dashes, KS.sPress][KS.step].length;
+  ksRender();
+  if (got >= st.need) {
+    KP.target = null;   // pause the pad briefly between steps
+    later(() => {
+      if (KS.step < 2) { KS.step++; KP.upAt = 0; KP.target = { raw: true, onPress: ksPress }; ksRender(); }
+      else ksFinish();
+    }, 700);
+  }
+}
+function ksFinish() {
+  detachKeypad();
+  const inside = KS.sGaps.filter((g, i) => (i + 1) % 3 !== 0), between = KS.sGaps.filter((g, i) => (i + 1) % 3 === 0);
+  const dots = KS.dots.concat(KS.sPress);
+  const t = recommend({ dots, dashes: KS.dashes, inside, between });
+  if (!t) { setBox($('ksAnswer'), 'Something went wrong — please try again.', 'hint'); return; }
+  S().send.dashMs = t.dashMs; S().send.letterMs = t.letterMs; S().send.auto = false; saveDB();
+  $('ksStep').innerHTML = '<b>All done!</b>';
+  let html = `<h4>Your key is set up ✓</h4>
+    <div class="r">Your dots: about <b>${sec(t.dot)}</b> · your dashes: about <b>${sec(t.dash)}</b> — that is sending at about <b>${Math.round(t.wpm)} words per minute</b>.</div>
+    <div class="r">I set: a dash is a press longer than <b>${sec(t.dashMs)}</b>, and a letter ends after a pause of <b>${sec(t.letterMs)}</b>.</div>`;
+  t.warn.forEach(w => html += `<div class="r" style="color:#b5541b">${w}</div>`);
+  setBox($('ksAnswer'), html, 'report');
+  const d = $('ksBtns'); d.innerHTML = '';
+  const tr = document.createElement('button'); tr.className = 'btn go'; tr.textContent = '✏️ Try It — Send Freely'; tr.onclick = () => go('sendfree'); d.appendChild(tr);
+  const ag = document.createElement('button'); ag.className = 'btn info'; ag.textContent = 'Do It Again'; ag.onclick = () => ENTER.keysetup(); d.appendChild(ag);
+  const dn = document.createElement('button'); dn.className = 'btn grey'; dn.textContent = 'Done'; dn.onclick = () => go('settings'); d.appendChild(dn);
+}
+
+// =====================================================================
+//  START
+// =====================================================================
+go('users');
+</script>
+</body>
+</html>

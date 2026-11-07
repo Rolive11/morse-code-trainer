@@ -1,5 +1,9 @@
 # Morse Code Trainer
 
+## ▶ [Open the app: rolive11.github.io/morse-code-trainer](https://rolive11.github.io/morse-code-trainer/)
+
+No account or download needed — just click the link above and type your name.
+
 Browser-based Morse code practice for the family. Each page is a single self-contained HTML file —
 no install, no internet needed. Open it in Chrome and go.
 
